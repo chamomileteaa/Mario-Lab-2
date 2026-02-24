@@ -509,7 +509,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: MarioFireThrow
+      name: MarioFireThrowAddictive
       rect:
         serializedVersion: 2
         x: 154
@@ -662,6 +662,50 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: MarioFireThrowBase
+      rect:
+        serializedVersion: 2
+        x: 136
+        y: 257
+        width: 16
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b5f3c31f895c4489ea9ceda13a6382f0
+      internalID: -1743770542
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TopCutMask
+      rect:
+        serializedVersion: 2
+        x: 226
+        y: 257
+        width: 16
+        height: 32
+      alignment: 7
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 335b5ce9fde93429b91202ff01b4e98c
+      internalID: -506247801
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
@@ -687,7 +731,8 @@ TextureImporter:
       MarioFireIdle: -1107932799
       MarioFireJump: 296595521
       MarioFireSkid: -594430970
-      MarioFireThrow: 677313631
+      MarioFireThrowAddictive: 677313631
+      MarioFireThrowBase: -1743770542
       MarioFireWalk_00: 1302064142
       MarioFireWalk_01: 1506661999
       MarioFireWalk_02: 889545046
@@ -701,6 +746,7 @@ TextureImporter:
       MarioSmallWalk_00: 976841844
       MarioSmallWalk_01: 381021023
       MarioSmallWalk_02: -1796075845
+      TopCutMask: -506247801
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
