@@ -509,7 +509,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: MarioFireThrowAddictive
+      name: MarioFireThrowAdditive
       rect:
         serializedVersion: 2
         x: 154
@@ -670,8 +670,8 @@ TextureImporter:
         y: 257
         width: 16
         height: 32
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      alignment: 7
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -731,7 +731,7 @@ TextureImporter:
       MarioFireIdle: -1107932799
       MarioFireJump: 296595521
       MarioFireSkid: -594430970
-      MarioFireThrowAddictive: 677313631
+      MarioFireThrowAdditive: 677313631
       MarioFireThrowBase: -1743770542
       MarioFireWalk_00: 1302064142
       MarioFireWalk_01: 1506661999
