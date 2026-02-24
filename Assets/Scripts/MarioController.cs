@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class MarioController : MonoBehaviour
 {
@@ -10,30 +11,42 @@ public class MarioController : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+    }
 
+    // old input
+    //void Update()
+    //{
+    //    move = Input.GetAxis("Horizontal");
+
+    //    if (Input.GetButtonDown("Jump"))
+    //    {
+    //        jump = true;
+    //    }
+        
+    //}
+
+    //new input
+
+    void OnMove(InputValue value)
+    {
+        move = value.Get<float>(); //left right only
         
     }
 
-    // Update is called once per frame
-    void Update()
+    void OnJump()
     {
-        move = Input.GetAxis("Horizontal");
-
-        if (Input.GetButtonDown("Jump"))
-        {
-            jump = true;
-        }
-        
+        jump = true;
+        //set so can only jump when detects tilemap ground
     }
 
     void FixedUpdate()
     {
-        rb.linearVelocity = new Vector2(move * 5, rb.linearVelocity.y);
+        rb.linearVelocity = new Vector2(move * 5f, rb.linearVelocity.y);
         
         if (jump)
         {
             jump = false;
-            rb.AddForce(transform.up * 6, ForceMode2D.Impulse);
+            rb.AddForce(transform.up * 6f, ForceMode2D.Impulse);
         }
     }
 
