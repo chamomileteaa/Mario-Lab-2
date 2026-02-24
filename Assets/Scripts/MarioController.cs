@@ -42,28 +42,10 @@ public class MarioController : MonoBehaviour
         if(collision.CompareTag("enemy"))
         {
             Debug.Log("lives-1");
-            Dead();
+            GameManager.Dead();
         }
-        
-        
-        
+          
     }
 
-        void Dead()
-    {
-        print("Dead");
 
-        GameData.lives--; 
-        if (GameData.lives == 0)
-        {
-            UnityEngine.SceneManagement.SceneManager.LoadScene("GameOver");
-        }
-
-        else
-        {
-            //reload current scene
-            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-            UnityEngine.SceneManagement.SceneManager.LoadScene(scene.name);
-        }
-    }
 }
