@@ -6,6 +6,12 @@ public class MarioController : MonoBehaviour
     Rigidbody2D rb;
     float move;
     bool jump;
+    bool isGrounded;
+
+    //check to see what is ground so mario can't infinite jump
+    public Transform groundCheck;
+    public float groundCheckRadius = 0.2f;
+    public LayerMask groundLayer;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -29,24 +35,33 @@ public class MarioController : MonoBehaviour
 
     void OnMove(InputValue value)
     {
-        move = value.Get<float>(); //left right only
+        move = value.Get<Vector2>().x; //left right only
         
     }
 
     void OnJump()
     {
-        jump = true;
+        if (isGrounded)
+        {
+            jump = true;
+        }
         //set so can only jump when detects tilemap ground
+    }
+
+    void Update()
+    {
+        //check if touching ground
+        isGrounded = Physics2D.OverlapCircle(groundCheck.position,groundCheckRadius,groundLayer);
     }
 
     void FixedUpdate()
     {
-        rb.linearVelocity = new Vector2(move * 5f, rb.linearVelocity.y);
+        rb.linearVelocity = new Vector2(move * 8f, rb.linearVelocity.y);
         
         if (jump)
         {
             jump = false;
-            rb.AddForce(transform.up * 6f, ForceMode2D.Impulse);
+            rb.AddForce(transform.up * 7f, ForceMode2D.Impulse);
         }
     }
 
