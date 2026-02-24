@@ -5,6 +5,7 @@ public class GameManager : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        GameData.Reset();
         
     }
 
@@ -21,7 +22,8 @@ public class GameManager : MonoBehaviour
         GameData.lives--; 
         if (GameData.lives == 0)
         {
-            UnityEngine.SceneManagement.SceneManager.LoadScene("GameOver");
+            GameOver();
+            //do gameManager.NewGame() on the gameover scene if player presses replay
         }
 
         else
@@ -30,5 +32,29 @@ public class GameManager : MonoBehaviour
             var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
             UnityEngine.SceneManagement.SceneManager.LoadScene(scene.name);
         }
+    }
+
+    public static void GameOver()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene("GameOver");
+        GameData.Reset();
+    }
+
+    public void AddCoin()
+    {
+        GameData.coins++;
+        //play coin audio
+
+        if (GameData.coins == 100)
+        {
+            GameData.coins = 0;
+            AddLife();
+        }
+    }
+
+    public void AddLife()
+    {
+        GameData.lives++;
+        //play audio
     }
 }
