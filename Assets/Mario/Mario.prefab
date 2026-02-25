@@ -150,10 +150,10 @@ MonoBehaviour:
   acceleration: 30
   deceleration: 10
   airControlMultiplier: 0.85
-  skidDeceleration: 14
   maxJumpHeight: 4
-  minJumpHeight: 1.8
+  minJumpHeight: 2.4
   timeToApex: 0.44
+  jumpReleaseGravityMultiplier: 1.4
   coyoteTime: 0.08
   groundCheck: {fileID: 7768019335697351842}
   groundCheckSize: {x: 1, y: 0.12}
@@ -170,7 +170,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: b16dc7e0c1a70494dbd20ea2f0b6d2ed, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -222,7 +222,7 @@ Rigidbody2D:
   m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_GravityScale: 4.2122645
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: b16dc7e0c1a70494dbd20ea2f0b6d2ed, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0

@@ -23,13 +23,14 @@ public class MarioController : MonoBehaviour
     [SerializeField] private float acceleration = 30f;
     [SerializeField] private float deceleration = 10f;
     [SerializeField] private float airControlMultiplier = 0.85f;
-    [SerializeField] private float skidDeceleration = 14f;
 
     [Header("Jump")]
     [SerializeField] private float maxJumpHeight = 4f;
-    [SerializeField] private float minJumpHeight = 1.8f;
+    [SerializeField] private float minJumpHeight = 2.4f;
     [SerializeField] private float timeToApex = 0.44f;
+    [SerializeField] private float jumpReleaseGravityMultiplier = 2.5f;
     [SerializeField] private float coyoteTime = 0.08f;
+    [SerializeField] private float jumpBufferTime = 0.1f;
 
     [Header("Ground Check")]
     [SerializeField] private Transform groundCheck;
@@ -45,6 +46,7 @@ public class MarioController : MonoBehaviour
     private bool isGrounded;
     private bool isDead;
     private float coyoteTimer;
+    private float jumpBufferTimer;
     private float jumpSpeed;
     private float shortJumpSpeed;
     private readonly Collider2D[] groundHits = new Collider2D[4];
@@ -52,7 +54,6 @@ public class MarioController : MonoBehaviour
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
     private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
-
     private void OnEnable()
     {
         UpdateJumpPhysics();
@@ -71,8 +72,10 @@ public class MarioController : MonoBehaviour
         ReadInput();
         isGrounded = CheckGrounded();
         coyoteTimer = isGrounded ? coyoteTime : Mathf.Max(0f, coyoteTimer - Time.deltaTime);
+        var jumpPressed = jumpAction?.action?.WasPressedThisFrame() ?? false;
+        jumpBufferTimer = jumpPressed ? jumpBufferTime : Mathf.Max(0f, jumpBufferTimer - Time.deltaTime);
 
-        if (jumpAction?.action?.WasPressedThisFrame() ?? false) TryStartJump();
+        TryStartJump();
 
         UpdateSpriteDirection();
         SyncAnimator();
@@ -81,7 +84,7 @@ public class MarioController : MonoBehaviour
     private void FixedUpdate()
     {
         ApplyHorizontalMovement();
-        ApplyJumpHold();
+        ApplyJumpRelease();
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
@@ -99,8 +102,10 @@ public class MarioController : MonoBehaviour
 
     private void TryStartJump()
     {
+        if (jumpBufferTimer <= 0f) return;
         if (coyoteTimer <= 0f) return;
 
+        jumpBufferTimer = 0f;
         coyoteTimer = 0f;
 
         var velocity = Body.linearVelocity;
@@ -116,14 +121,11 @@ public class MarioController : MonoBehaviour
 
         var velocity = Body.linearVelocity;
         var currentSpeedX = velocity.x;
-        var isSkidding = IsSkidding(inputX, currentSpeedX);
-
         var control = isGrounded ? 1f : airControlMultiplier;
         if (Mathf.Abs(inputX) > InputDeadzone)
         {
             var targetX = inputX * maxMoveSpeed;
-            var rate = isSkidding ? skidDeceleration : acceleration * control;
-            velocity.x = Mathf.MoveTowards(currentSpeedX, targetX, rate * Time.fixedDeltaTime);
+            velocity.x = Mathf.MoveTowards(currentSpeedX, targetX, acceleration * control * Time.fixedDeltaTime);
         }
         else
         {
@@ -139,14 +141,18 @@ public class MarioController : MonoBehaviour
         Body.linearVelocity = velocity;
     }
 
-    private void ApplyJumpHold()
+    private void ApplyJumpRelease()
     {
         if (jumpHeld) return;
 
         var velocity = Body.linearVelocity;
-        if (velocity.y <= shortJumpSpeed) return;
+        if (velocity.y <= 0f) return;
 
-        velocity.y = shortJumpSpeed;
+        if (velocity.y > shortJumpSpeed)
+            velocity.y = shortJumpSpeed;
+
+        var extraGravity = Mathf.Abs(Physics2D.gravity.y) * Body.gravityScale * (jumpReleaseGravityMultiplier - 1f);
+        velocity.y -= extraGravity * Time.fixedDeltaTime;
         Body.linearVelocity = velocity;
     }
 
@@ -213,14 +219,15 @@ public class MarioController : MonoBehaviour
         acceleration = Mathf.Max(0f, acceleration);
         deceleration = Mathf.Max(0f, deceleration);
         airControlMultiplier = Mathf.Clamp01(airControlMultiplier);
-        skidDeceleration = Mathf.Max(0f, skidDeceleration);
 
         maxJumpHeight = Mathf.Max(0.1f, maxJumpHeight);
         minJumpHeight = Mathf.Clamp(minJumpHeight, 0.1f, maxJumpHeight);
         timeToApex = Mathf.Max(0.05f, timeToApex);
+        jumpReleaseGravityMultiplier = Mathf.Max(1f, jumpReleaseGravityMultiplier);
         groundCheckSize.x = Mathf.Max(0.01f, groundCheckSize.x);
         groundCheckSize.y = Mathf.Max(0.01f, groundCheckSize.y);
         coyoteTime = Mathf.Max(0f, coyoteTime);
+        jumpBufferTime = Mathf.Max(0f, jumpBufferTime);
 
         if (!groundCheck) groundCheck = transform.Find("GroundCheck");
         if (!spriteFlipper) spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
