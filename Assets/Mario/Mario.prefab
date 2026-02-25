@@ -155,6 +155,7 @@ MonoBehaviour:
   timeToApex: 0.44
   jumpReleaseGravityMultiplier: 1.4
   coyoteTime: 0.08
+  jumpBufferTime: 0.1
   groundCheck: {fileID: 7768019335697351842}
   groundCheckSize: {x: 1, y: 0.12}
   groundLayer:
