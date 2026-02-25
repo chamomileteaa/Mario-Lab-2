@@ -10,27 +10,39 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(AnimatorCache))]
 public class MarioController : MonoBehaviour
 {
+    public enum MarioForm
+    {
+        Small = 0,
+        Big = 1,
+        Fire = 2
+    }
+
     private const float InputDeadzone = 0.01f;
     private const float CrouchThreshold = -0.5f;
     private const float MinAnimMoveSpeed = 0.2f;
+    private const string GrowTriggerName = "grow";
+    private const string ShrinkTriggerName = "shrink";
+    private const string DieTriggerName = "die";
 
     [Header("Input")]
     [SerializeField] private InputActionReference moveAction;
     [SerializeField] private InputActionReference jumpAction;
 
     [Header("Horizontal")]
-    [SerializeField] private float maxMoveSpeed = 7f;
-    [SerializeField] private float acceleration = 30f;
-    [SerializeField] private float deceleration = 10f;
-    [SerializeField] private float airControlMultiplier = 0.85f;
+    [SerializeField, Min(0.1f)] private float maxMoveSpeed = 7f;
+    [SerializeField, Min(0f)] private float acceleration = 30f;
+    [SerializeField, Min(0f)] private float deceleration = 10f;
+    [SerializeField, Range(0f, 1f)] private float airControlMultiplier = 0.85f;
 
     [Header("Jump")]
-    [SerializeField] private float maxJumpHeight = 4f;
-    [SerializeField] private float minJumpHeight = 2.4f;
-    [SerializeField] private float timeToApex = 0.44f;
-    [SerializeField] private float jumpReleaseGravityMultiplier = 2.5f;
-    [SerializeField] private float coyoteTime = 0.08f;
-    [SerializeField] private float jumpBufferTime = 0.1f;
+    [SerializeField, MinMaxInt(0.1f, 8f)] private MinMaxFloat jumpHeight = new MinMaxFloat(2.4f, 4f);
+    [SerializeField, Min(0.05f)] private float timeToApex = 0.44f;
+    [SerializeField, Min(1f)] private float jumpReleaseGravityMultiplier = 2.5f;
+    [SerializeField, Min(0f)] private float coyoteTime = 0.08f;
+    [SerializeField, Min(0f)] private float jumpBufferTime = 0.1f;
+
+    [Header("Form")]
+    [SerializeField] private MarioForm initialForm = MarioForm.Small;
 
     [Header("Ground Check")]
     [SerializeField] private Transform groundCheck;
@@ -45,15 +57,23 @@ public class MarioController : MonoBehaviour
     private bool jumpHeld;
     private bool isGrounded;
     private bool isDead;
+    private bool isSuper;
     private float coyoteTimer;
     private float jumpBufferTimer;
     private float jumpSpeed;
     private float shortJumpSpeed;
+    private MarioForm form;
     private readonly Collider2D[] groundHits = new Collider2D[4];
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
     private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
+    public MarioForm Form => form;
+    public bool IsSmall => form == MarioForm.Small;
+    public bool IsSuper => isSuper;
+
+    private void Awake() => form = initialForm;
+
     private void OnEnable()
     {
         UpdateJumpPhysics();
@@ -91,8 +111,34 @@ public class MarioController : MonoBehaviour
     {
         if (!collision.CompareTag("enemy")) return;
         if (isDead) return;
-        ResolveDeath();
+        TakeDamage();
     }
+
+    public void TakeDamage()
+    {
+        if (isDead || isSuper) return;
+        if (IsSmall)
+        {
+            ResolveDeath();
+            return;
+        }
+
+        SetForm((MarioForm)((int)form - 1));
+    }
+
+    public void SetForm(MarioForm targetForm)
+    {
+        if (isDead) return;
+
+        targetForm = (MarioForm)Mathf.Clamp((int)targetForm, (int)MarioForm.Small, (int)MarioForm.Fire);
+        if (targetForm == form) return;
+
+        var grew = targetForm > form;
+        form = targetForm;
+        Anim.TrySetTrigger(grew ? GrowTriggerName : ShrinkTriggerName);
+    }
+
+    public void SetSuper(bool value) => isSuper = value;
 
     private void ReadInput()
     {
@@ -188,6 +234,7 @@ public class MarioController : MonoBehaviour
         Anim.TrySet("isGrounded", isGrounded);
         Anim.TrySet("isCrouching", IsCrouching);
         Anim.TrySet("isSkidding", IsSkidding(inputX, velocity.x));
+        Anim.TrySet("form", (float)form);
     }
 
     private void UpdateSpriteDirection()
@@ -201,6 +248,7 @@ public class MarioController : MonoBehaviour
     private void ResolveDeath()
     {
         isDead = true;
+        Anim.TrySetTrigger(DieTriggerName);
 
         GameData.lives--;
         if (GameData.lives <= 0)
@@ -215,26 +263,9 @@ public class MarioController : MonoBehaviour
 
     private void OnValidate()
     {
-        maxMoveSpeed = Mathf.Max(0.1f, maxMoveSpeed);
-        acceleration = Mathf.Max(0f, acceleration);
-        deceleration = Mathf.Max(0f, deceleration);
-        airControlMultiplier = Mathf.Clamp01(airControlMultiplier);
-
-        maxJumpHeight = Mathf.Max(0.1f, maxJumpHeight);
-        minJumpHeight = Mathf.Clamp(minJumpHeight, 0.1f, maxJumpHeight);
-        timeToApex = Mathf.Max(0.05f, timeToApex);
-        jumpReleaseGravityMultiplier = Mathf.Max(1f, jumpReleaseGravityMultiplier);
-        groundCheckSize.x = Mathf.Max(0.01f, groundCheckSize.x);
-        groundCheckSize.y = Mathf.Max(0.01f, groundCheckSize.y);
-        coyoteTime = Mathf.Max(0f, coyoteTime);
-        jumpBufferTime = Mathf.Max(0f, jumpBufferTime);
-
         if (!groundCheck) groundCheck = transform.Find("GroundCheck");
         if (!spriteFlipper) spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
-
-        body2D = GetComponent<Rigidbody2D>();
-        animatorCache = GetComponent<AnimatorCache>();
-        UpdateJumpPhysics();
+        if (!Application.isPlaying) form = initialForm;
     }
 
     private void OnDrawGizmosSelected()
@@ -246,10 +277,9 @@ public class MarioController : MonoBehaviour
 
     private void UpdateJumpPhysics()
     {
-        var apexTime = Mathf.Max(0.05f, timeToApex);
-        var gravity = (2f * maxJumpHeight) / (apexTime * apexTime);
-        jumpSpeed = gravity * apexTime;
-        shortJumpSpeed = Mathf.Sqrt(2f * gravity * minJumpHeight);
+        var gravity = (2f * jumpHeight.max) / (timeToApex * timeToApex);
+        jumpSpeed = gravity * timeToApex;
+        shortJumpSpeed = Mathf.Sqrt(2f * gravity * jumpHeight.min);
 
         var worldGravity = Mathf.Abs(Physics2D.gravity.y);
         if (worldGravity <= 0.0001f) return;
