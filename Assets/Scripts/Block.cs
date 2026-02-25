@@ -182,7 +182,7 @@ public class Block : MonoBehaviour
     private void Break()
     {
         TryTrigger("break");
-        if (breakPrefab) PrefabPoolLocator.Spawn(breakPrefab, transform.position, Quaternion.identity);
+        if (breakPrefab) PrefabPoolService.Spawn(breakPrefab, transform.position, Quaternion.identity);
         Destroy(gameObject);
     }
 
@@ -243,7 +243,7 @@ public class Block : MonoBehaviour
     private void Spawn(ContentStep step)
     {
         if (!step.prefab) return;
-        PrefabPoolLocator.Spawn(step.prefab, SpawnPosition, Quaternion.identity);
+        PrefabPoolService.Spawn(step.prefab, SpawnPosition, Quaternion.identity);
     }
 
     private void ResetContentProgress()

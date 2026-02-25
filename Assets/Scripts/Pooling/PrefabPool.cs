@@ -7,11 +7,9 @@ public class PrefabPool : MonoBehaviour
     [SerializeField] private GameObject prefab;
     [SerializeField, Min(0)] private int prewarmCount;
     [SerializeField, Min(1)] private int maxSize = 128;
-    [SerializeField] private bool collectionChecks;
     [SerializeField] private Transform inactiveContainer;
 
     private readonly Stack<PooledObject> inactive = new Stack<PooledObject>();
-    private readonly HashSet<PooledObject> active = new HashSet<PooledObject>();
     private int activeCount;
 
     public GameObject Prefab => prefab;
@@ -20,15 +18,34 @@ public class PrefabPool : MonoBehaviour
 
     private Transform InactiveContainer => inactiveContainer ? inactiveContainer : transform;
 
+    public void Configure(GameObject targetPrefab, int targetPrewarmCount = 0, int targetMaxSize = 128, Transform targetInactiveContainer = null)
+    {
+        var previousPrefab = prefab;
+        if (previousPrefab && targetPrefab && previousPrefab != targetPrefab)
+        {
+            Debug.LogWarning($"PrefabPool '{name}' is already bound to '{previousPrefab.name}'. Create a new pool for '{targetPrefab.name}'.", this);
+            return;
+        }
+
+        prefab = targetPrefab;
+        prewarmCount = Mathf.Max(0, targetPrewarmCount);
+        maxSize = Mathf.Max(1, targetMaxSize);
+        inactiveContainer = targetInactiveContainer;
+
+        if (!isActiveAndEnabled) return;
+        PrefabPoolService.Register(this);
+        Prewarm(prewarmCount);
+    }
+
     private void OnEnable()
     {
-        PrefabPoolLocator.Register(this);
+        PrefabPoolService.Register(this);
         Prewarm(prewarmCount);
     }
 
     private void OnDisable()
     {
-        PrefabPoolLocator.Unregister(this);
+        PrefabPoolService.Unregister(this);
     }
 
     public GameObject Spawn(Vector3 position, Quaternion rotation, Transform parent = null)
@@ -39,7 +56,6 @@ public class PrefabPool : MonoBehaviour
         if (!pooled) return null;
 
         pooled.SetInPool(false);
-        if (collectionChecks) active.Add(pooled);
         activeCount++;
 
         var instance = pooled.gameObject;
@@ -59,23 +75,22 @@ public class PrefabPool : MonoBehaviour
     {
         if (!pooled) return false;
         if (pooled.OwnerPool != this) return false;
+        if (pooled.IsInPool) return false;
 
-        if (collectionChecks)
+        if (inactive.Count >= maxSize)
         {
-            if (!active.Remove(pooled)) return false;
+            if (!pooled.HandleReleaseFailure()) return false;
+            activeCount = Mathf.Max(0, activeCount - 1);
+            return true;
         }
-        else if (pooled.IsInPool) return false;
-
-        activeCount = Mathf.Max(0, activeCount - 1);
 
         var instance = pooled.gameObject;
-        if (inactive.Count >= maxSize)
-            return pooled.HandleReleaseFailure();
-
         pooled.SetInPool(true);
         instance.SetActive(false);
         instance.transform.SetParent(InactiveContainer, false);
         inactive.Push(pooled);
+
+        activeCount = Mathf.Max(0, activeCount - 1);
         return true;
     }
 

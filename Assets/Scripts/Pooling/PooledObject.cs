@@ -4,7 +4,7 @@ using UnityEngine;
 public class PooledObject : MonoBehaviour
 {
     [SerializeField, HideInInspector] private bool hasParticleSystem;
-    [SerializeField, ConditionalField(nameof(hasParticleSystem))] private bool releaseOnParticleStop;
+    [SerializeField, ConditionalField(nameof(hasParticleSystem), true, "Particle")] private bool autoReleaseOnParticleStop;
     [SerializeField] private bool destroyWhenReleaseFails = true;
 
     [SerializeField, HideInInspector] private bool isInPool;
@@ -17,19 +17,17 @@ public class PooledObject : MonoBehaviour
 
     private void Awake()
     {
-        SyncParticleState();
-        EnsureParticleStopCallback();
+        RefreshParticleOptions();
     }
 
     private void OnValidate()
     {
-        SyncParticleState();
-        EnsureParticleStopCallback();
+        RefreshParticleOptions();
     }
 
     private void OnParticleSystemStopped()
     {
-        if (!releaseOnParticleStop) return;
+        if (!autoReleaseOnParticleStop) return;
         ReleaseToPool();
     }
 
@@ -50,20 +48,19 @@ public class PooledObject : MonoBehaviour
         return HandleReleaseFailure();
     }
 
-    private void EnsureParticleStopCallback()
+    private void RefreshParticleOptions()
     {
-        if (!releaseOnParticleStop) return;
-        if (!Particles) return;
+        hasParticleSystem = Particles;
+        if (!hasParticleSystem)
+        {
+            autoReleaseOnParticleStop = false;
+            return;
+        }
+
+        if (!autoReleaseOnParticleStop) return;
 
         var main = Particles.main;
         if (main.stopAction != ParticleSystemStopAction.Callback) main.stopAction = ParticleSystemStopAction.Callback;
-    }
-
-    private void SyncParticleState()
-    {
-        hasParticleSystem = Particles;
-        if (hasParticleSystem) return;
-        releaseOnParticleStop = false;
     }
 
     public bool HandleReleaseFailure()
