@@ -351,7 +351,7 @@ MonoBehaviour:
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 00000000
+  m_ApplyToSortingLayers: 0000000089f09e757b0c53dc21676d5b
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0
@@ -903,5 +903,5 @@ SceneRoots:
   - {fileID: 329795773}
   - {fileID: 2121907898}
   - {fileID: 879052138}
-  - {fileID: 1858350803}
   - {fileID: 373317565}
+  - {fileID: 1858350803}
