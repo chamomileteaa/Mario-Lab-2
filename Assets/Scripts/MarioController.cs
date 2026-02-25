@@ -5,7 +5,6 @@ using UnityEngine.SceneManagement;
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
-[RequireComponent(typeof(Animator))]
 [RequireComponent(typeof(AnimatorCache))]
 public class MarioController : MonoBehaviour
 {
@@ -42,9 +41,9 @@ public class MarioController : MonoBehaviour
     [SerializeField, Min(0f)] private float damageInvulnerabilityTime = 1f;
 
     [Header("Collider")]
-    [SerializeField] private Vector2 smallColliderSize = new Vector2(1f, 1f);
+    [SerializeField, Min(0.01f)] private Vector2 smallColliderSize = new Vector2(1f, 1f);
     [SerializeField] private Vector2 smallColliderOffset = new Vector2(0f, 0.5f);
-    [SerializeField] private Vector2 bigColliderSize = new Vector2(1f, 2f);
+    [SerializeField, Min(0.01f)] private Vector2 bigColliderSize = new Vector2(1f, 2f);
     [SerializeField] private Vector2 bigColliderOffset = new Vector2(0f, 1f);
 
     [Header("Ground Check")]
@@ -307,10 +306,6 @@ public class MarioController : MonoBehaviour
     {
         if (!groundCheck) groundCheck = transform.Find("GroundCheck");
         if (!spriteFlipper) spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
-        if (smallColliderSize.x < 0.01f) smallColliderSize.x = 0.01f;
-        if (smallColliderSize.y < 0.01f) smallColliderSize.y = 0.01f;
-        if (bigColliderSize.x < 0.01f) bigColliderSize.x = 0.01f;
-        if (bigColliderSize.y < 0.01f) bigColliderSize.y = 0.01f;
         if (!Application.isPlaying) form = initialForm;
     }
 
