@@ -1,11 +1,10 @@
-using Animation;
-using Utils;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(BoxCollider2D))]
 [RequireComponent(typeof(Animator))]
 [RequireComponent(typeof(AnimatorCache))]
 public class MarioController : MonoBehaviour
@@ -20,9 +19,6 @@ public class MarioController : MonoBehaviour
     private const float InputDeadzone = 0.01f;
     private const float CrouchThreshold = -0.5f;
     private const float MinAnimMoveSpeed = 0.2f;
-    private const string GrowTriggerName = "grow";
-    private const string ShrinkTriggerName = "shrink";
-    private const string DieTriggerName = "die";
 
     [Header("Input")]
     [SerializeField] private InputActionReference moveAction;
@@ -43,6 +39,13 @@ public class MarioController : MonoBehaviour
 
     [Header("Form")]
     [SerializeField] private MarioForm initialForm = MarioForm.Small;
+    [SerializeField, Min(0f)] private float damageInvulnerabilityTime = 1f;
+
+    [Header("Collider")]
+    [SerializeField] private Vector2 smallColliderSize = new Vector2(1f, 1f);
+    [SerializeField] private Vector2 smallColliderOffset = new Vector2(0f, 0.5f);
+    [SerializeField] private Vector2 bigColliderSize = new Vector2(1f, 2f);
+    [SerializeField] private Vector2 bigColliderOffset = new Vector2(0f, 1f);
 
     [Header("Ground Check")]
     [SerializeField] private Transform groundCheck;
@@ -50,6 +53,7 @@ public class MarioController : MonoBehaviour
     [SerializeField] private LayerMask groundLayer;
 
     private Rigidbody2D body2D;
+    private BoxCollider2D bodyCollider2D;
     private AnimatorCache animatorCache;
     private SpriteFlipper spriteFlipper;
 
@@ -58,21 +62,37 @@ public class MarioController : MonoBehaviour
     private bool isGrounded;
     private bool isDead;
     private bool isSuper;
+    private bool pendingGrow;
     private float coyoteTimer;
     private float jumpBufferTimer;
+    private float damageInvulnerabilityTimer;
     private float jumpSpeed;
     private float shortJumpSpeed;
     private MarioForm form;
+    private MarioForm pendingGrowForm;
     private readonly Collider2D[] groundHits = new Collider2D[4];
+    private readonly Collider2D[] resizeHits = new Collider2D[4];
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
+    private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
     private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
+
     public MarioForm Form => form;
     public bool IsSmall => form == MarioForm.Small;
     public bool IsSuper => isSuper;
 
-    private void Awake() => form = initialForm;
+    private void Awake()
+    {
+        form = (MarioForm)Mathf.Clamp((int)initialForm, (int)MarioForm.Small, (int)MarioForm.Fire);
+        ApplySmallCollider();
+        if (form != MarioForm.Small)
+        {
+            pendingGrow = true;
+            pendingGrowForm = form;
+            form = MarioForm.Small;
+        }
+    }
 
     private void OnEnable()
     {
@@ -89,20 +109,30 @@ public class MarioController : MonoBehaviour
 
     private void Update()
     {
-        ReadInput();
+        if (PauseService.IsPaused(PauseType.Input))
+        {
+            moveInput = Vector2.zero;
+            jumpHeld = false;
+            jumpBufferTimer = 0f;
+        }
+        else
+            ReadInput();
+
         isGrounded = CheckGrounded();
         coyoteTimer = isGrounded ? coyoteTime : Mathf.Max(0f, coyoteTimer - Time.deltaTime);
-        var jumpPressed = jumpAction?.action?.WasPressedThisFrame() ?? false;
+        damageInvulnerabilityTimer = Mathf.Max(0f, damageInvulnerabilityTimer - Time.deltaTime);
+
+        var jumpPressed = !PauseService.IsPaused(PauseType.Input) && (jumpAction?.action?.WasPressedThisFrame() ?? false);
         jumpBufferTimer = jumpPressed ? jumpBufferTime : Mathf.Max(0f, jumpBufferTimer - Time.deltaTime);
 
         TryStartJump();
-
         UpdateSpriteDirection();
         SyncAnimator();
     }
 
     private void FixedUpdate()
     {
+        TryCompletePendingGrow();
         ApplyHorizontalMovement();
         ApplyJumpRelease();
     }
@@ -116,7 +146,7 @@ public class MarioController : MonoBehaviour
 
     public void TakeDamage()
     {
-        if (isDead || isSuper) return;
+        if (isDead || isSuper || damageInvulnerabilityTimer > 0f) return;
         if (IsSmall)
         {
             ResolveDeath();
@@ -124,6 +154,7 @@ public class MarioController : MonoBehaviour
         }
 
         SetForm((MarioForm)((int)form - 1));
+        damageInvulnerabilityTimer = damageInvulnerabilityTime;
     }
 
     public void SetForm(MarioForm targetForm)
@@ -134,8 +165,19 @@ public class MarioController : MonoBehaviour
         if (targetForm == form) return;
 
         var grew = targetForm > form;
+        if (targetForm == MarioForm.Small) pendingGrow = false;
+
+        if (grew && form == MarioForm.Small && !TryApplyBigCollider())
+        {
+            pendingGrow = true;
+            pendingGrowForm = targetForm;
+            return;
+        }
+
+        if (!grew && targetForm == MarioForm.Small) ApplySmallCollider();
+
         form = targetForm;
-        Anim.TrySetTrigger(grew ? GrowTriggerName : ShrinkTriggerName);
+        Anim.TrySetTrigger(grew ? "grow" : "shrink");
     }
 
     public void SetSuper(bool value) => isSuper = value;
@@ -168,6 +210,7 @@ public class MarioController : MonoBehaviour
         var velocity = Body.linearVelocity;
         var currentSpeedX = velocity.x;
         var control = isGrounded ? 1f : airControlMultiplier;
+
         if (Mathf.Abs(inputX) > InputDeadzone)
         {
             var targetX = inputX * maxMoveSpeed;
@@ -193,9 +236,7 @@ public class MarioController : MonoBehaviour
 
         var velocity = Body.linearVelocity;
         if (velocity.y <= 0f) return;
-
-        if (velocity.y > shortJumpSpeed)
-            velocity.y = shortJumpSpeed;
+        if (velocity.y > shortJumpSpeed) velocity.y = shortJumpSpeed;
 
         var extraGravity = Mathf.Abs(Physics2D.gravity.y) * Body.gravityScale * (jumpReleaseGravityMultiplier - 1f);
         velocity.y -= extraGravity * Time.fixedDeltaTime;
@@ -248,7 +289,8 @@ public class MarioController : MonoBehaviour
     private void ResolveDeath()
     {
         isDead = true;
-        Anim.TrySetTrigger(DieTriggerName);
+        pendingGrow = false;
+        Anim.TrySetTrigger("die");
 
         GameData.lives--;
         if (GameData.lives <= 0)
@@ -265,6 +307,10 @@ public class MarioController : MonoBehaviour
     {
         if (!groundCheck) groundCheck = transform.Find("GroundCheck");
         if (!spriteFlipper) spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
+        if (smallColliderSize.x < 0.01f) smallColliderSize.x = 0.01f;
+        if (smallColliderSize.y < 0.01f) smallColliderSize.y = 0.01f;
+        if (bigColliderSize.x < 0.01f) bigColliderSize.x = 0.01f;
+        if (bigColliderSize.y < 0.01f) bigColliderSize.y = 0.01f;
         if (!Application.isPlaying) form = initialForm;
     }
 
@@ -273,6 +319,12 @@ public class MarioController : MonoBehaviour
         var probeCenter = groundCheck ? (Vector2)groundCheck.position : (Vector2)transform.position;
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireCube(probeCenter, groundCheckSize);
+
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireCube((Vector2)transform.position + smallColliderOffset, smallColliderSize);
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireCube((Vector2)transform.position + bigColliderOffset, bigColliderSize);
     }
 
     private void UpdateJumpPhysics()
@@ -285,6 +337,40 @@ public class MarioController : MonoBehaviour
         if (worldGravity <= 0.0001f) return;
 
         Body.gravityScale = gravity / worldGravity;
+    }
+
+    private void TryCompletePendingGrow()
+    {
+        if (!pendingGrow || isDead || !IsSmall) return;
+        if (!TryApplyBigCollider()) return;
+
+        pendingGrow = false;
+        form = pendingGrowForm;
+        Anim.TrySetTrigger("grow");
+    }
+
+    private bool TryApplyBigCollider()
+    {
+        var filter = new ContactFilter2D { useLayerMask = true, layerMask = groundLayer, useTriggers = false };
+        var center = (Vector2)transform.position + bigColliderOffset;
+        var hitCount = Physics2D.OverlapBox(center, bigColliderSize, 0f, filter, resizeHits);
+        for (var i = 0; i < hitCount; i++)
+            if (resizeHits[i] && resizeHits[i] != BodyCollider && !resizeHits[i].isTrigger)
+                return false;
+
+        SetBodyCollider(bigColliderSize, bigColliderOffset);
+        return true;
+    }
+
+    private void ApplySmallCollider()
+    {
+        SetBodyCollider(smallColliderSize, smallColliderOffset);
+    }
+
+    private void SetBodyCollider(Vector2 size, Vector2 offset)
+    {
+        BodyCollider.size = size;
+        BodyCollider.offset = offset;
     }
 
     private static bool IsSkidding(float inputX, float velocityX)
