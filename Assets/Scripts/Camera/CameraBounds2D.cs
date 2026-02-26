@@ -14,25 +14,8 @@ public class CameraBounds2D : MonoBehaviour
     [field: SerializeField] public Color BackgroundColor { get; private set; } = Color.black;
 
     private BoxCollider2D boxCollider;
-
-    private BoxCollider2D BoxCollider
-    {
-        get
-        {
-            if (boxCollider) return boxCollider;
-            boxCollider = GetComponent<BoxCollider2D>();
-            return boxCollider;
-        }
-    }
-
-    public Rect WorldRect
-    {
-        get
-        {
-            var bounds = BoxCollider.bounds;
-            return new Rect(bounds.min, bounds.size);
-        }
-    }
+    private BoxCollider2D BoxCollider => boxCollider ? boxCollider : boxCollider = GetComponent<BoxCollider2D>();
+    public Rect WorldRect => new Rect(BoxCollider.bounds.min, BoxCollider.bounds.size);
 
     private void Awake()
     {

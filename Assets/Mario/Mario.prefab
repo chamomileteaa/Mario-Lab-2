@@ -161,12 +161,12 @@ MonoBehaviour:
   damageInvulnerabilityTime: 1
   invulnerabilityMinAlpha: 0.35
   invulnerabilityFlickerSpeed: 18
-  stompBounceSpeed: 7.5
+  stompBounceSpeed: 15
   stompContactGap:
     min: -0.55
     max: 0.3
-  stompContactNormalMinY: 0.2
   stompContactPointTolerance: 0.08
+  stompSideTolerance: 0.18
   stompMaxUpwardVelocity: 0.75
   smallColliderSize: {x: 0.8, y: 0.9375}
   smallColliderOffset: {x: 0, y: 0.5325}

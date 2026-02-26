@@ -202,20 +202,23 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
         for (var i = 0; i < hitCount; i++)
         {
             var hitCollider = aheadHits[i].collider;
-            if (!hitCollider || IsOwnCollider(hitCollider)) continue;
-
-            var otherEntity = ResolveEntityFromCollider(hitCollider);
-            if (otherEntity && otherEntity != this)
-            {
-                if ((turnRules & TurnMatrix.Entities) != 0) return true;
-                continue;
-            }
-
-            if ((turnRules & TurnMatrix.Walls) != 0)
-                return true;
+            if (ShouldTurnFromCollider(hitCollider)) return true;
         }
 
         return false;
+    }
+
+    private bool ShouldTurnFromCollider(Collider2D collider)
+    {
+        if (!collider) return false;
+        if (IsOwnCollider(collider)) return false;
+        if (collider.CompareColliderTag("Player")) return false;
+
+        var otherEntity = ResolveEntityFromCollider(collider);
+        if (otherEntity)
+            return (turnRules & TurnMatrix.Entities) != 0;
+
+        return (turnRules & TurnMatrix.Walls) != 0;
     }
 
     private EntityController ResolveOtherEntity(Collision2D collision)
