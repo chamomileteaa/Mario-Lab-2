@@ -1,12 +1,13 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(EntityController))]
 [RequireComponent(typeof(AnimatorCache))]
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Collider2D))]
-public class GoombaController : MonoBehaviour, IStompable
+public class GoombaController : MonoBehaviour, IStompHandler
 {
     private const string SquashTrigger = "squash";
 
@@ -17,7 +18,8 @@ public class GoombaController : MonoBehaviour, IStompable
     [SerializeField] private Vector3 scorePopupOffset = new Vector3(0f, 0.35f, 0f);
 
     [Header("Knock Away")]
-    [SerializeField] private bool defeatWhenKnockedAway = true;
+    [FormerlySerializedAs("defeatWhenKnockedAway")]
+    [SerializeField] private bool defeatWhenKnockedBack = true;
     [SerializeField, Min(0.5f)] private float despawnBelowSpawnDistance = 12f;
 
     private EntityController entityController;
@@ -60,12 +62,12 @@ public class GoombaController : MonoBehaviour, IStompable
         Body.angularVelocity = 0f;
         BodyCollider.enabled = true;
         ResetAnimationState();
-        Entity.KnockedAway += OnEntityKnockedAway;
+        Entity.KnockbackAppliedWithType += OnEntityKnockedBack;
     }
 
     private void OnDisable()
     {
-        Entity.KnockedAway -= OnEntityKnockedAway;
+        Entity.KnockbackAppliedWithType -= OnEntityKnockedBack;
 
         if (squishRoutine == null) return;
         StopCoroutine(squishRoutine);
@@ -79,7 +81,7 @@ public class GoombaController : MonoBehaviour, IStompable
         PrefabPoolService.Despawn(gameObject);
     }
 
-    public bool TryStomp(MarioController mario, Vector2 hitPoint)
+    public bool TryHandleStomp(in EnemyImpactContext context)
     {
         if (defeated) return false;
         DefeatBySquish();
@@ -124,9 +126,9 @@ public class GoombaController : MonoBehaviour, IStompable
         gameObject.tag = "Untagged";
     }
 
-    private void OnEntityKnockedAway(EntityController controller)
+    private void OnEntityKnockedBack(EntityController controller, EnemyImpactType impactType)
     {
-        if (!defeatWhenKnockedAway) return;
+        if (impactType != EnemyImpactType.Star && !defeatWhenKnockedBack) return;
         if (defeated) return;
         SetDefeatedState();
         Audio?.PlayDeath();

@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(SpriteFlipper))]
-public class EntityController : MonoBehaviour, IBlockBumpReactive
+public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHandler, IKnockbackHandler
 {
     [Flags]
     public enum TurnMatrix
@@ -39,9 +40,14 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
     [SerializeField, Min(0f)] private float knockAwayHorizontalSpeed = 2f;
     [SerializeField, Min(0f)] private float knockAwayGravityScale = 1f;
 
+    [Header("Defeat")]
+    [SerializeField] private bool allowKnockbackHit = true;
+    [SerializeField] private bool allowStarHit = true;
+
     private Rigidbody2D body2D;
     private Collider2D mainCollider2D;
     private Collider2D[] ownColliders;
+    private readonly HashSet<int> ownColliderIds = new HashSet<int>(8);
     private SpriteFlipper spriteFlipper;
     private bool movementEnabled;
     private bool startedMovement;
@@ -57,8 +63,11 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
         : ownColliders = GetComponentsInChildren<Collider2D>(true);
     private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponent<SpriteFlipper>();
 
-    public event Action<EntityController> KnockedAway;
-    public bool IsKnockedAway => knockedAway;
+    public event Action<EntityController> KnockbackApplied;
+    public event Action<EntityController, EnemyImpactType> KnockbackAppliedWithType;
+    public bool IsKnockedBack => knockedAway;
+    [Obsolete("Use IsKnockedBack instead.")]
+    public bool IsKnockedAway => IsKnockedBack;
 
     private void Awake()
     {
@@ -84,6 +93,7 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
         Body.collisionDetectionMode = useContinuousCollisionDetection
             ? CollisionDetectionMode2D.Continuous
             : CollisionDetectionMode2D.Discrete;
+        RebuildOwnColliderIds();
         SetCollidersEnabled(true);
         Body.WakeUp();
         UpdateFacing(1f);
@@ -140,7 +150,7 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
     public void ReverseDirection() => SetDirection(-moveDirectionX);
 
-    public void OnBlockBumped(BlockBumpContext context)
+    public void HandleBlockBump(in BlockBumpContext context)
     {
         switch (blockBumpReaction)
         {
@@ -156,27 +166,56 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
             }
 
             case BlockBumpReaction.KnockAway:
-            {
-                startedMovement = true;
-                movementEnabled = true;
-                knockedAway = true;
-
-                var awayX = Mathf.Sign(transform.position.x - context.Origin.x);
-                if (Mathf.Approximately(awayX, 0f)) awayX = moveDirectionX;
-                moveDirectionX = ToDirection(awayX);
-                UpdateFacing(-1f);
-
-                SetCollidersEnabled(false);
-                Body.gravityScale = Mathf.Max(initialGravityScale, knockAwayGravityScale);
-                var velocity = Body.linearVelocity;
-                velocity.x = moveDirectionX * knockAwayHorizontalSpeed;
-                velocity.y = Mathf.Max(velocity.y, bumpUpwardSpeed);
-                Body.linearVelocity = velocity;
-                nextTurnTime = Time.time + turnCooldown;
-                KnockedAway?.Invoke(this);
+                var knockbackContext = new EnemyImpactContext(EnemyImpactType.Knockback, context.Mario, context.Origin, context.Origin);
+                TryHandleKnockback(in knockbackContext);
                 return;
-            }
         }
+    }
+
+    public bool TryHandleImpact(in EnemyImpactContext context)
+    {
+        return context.ImpactType switch
+        {
+            EnemyImpactType.Star when allowStarHit => TryHandleKnockback(in context),
+            EnemyImpactType.Knockback when allowKnockbackHit => TryHandleKnockback(in context),
+            _ => false
+        };
+    }
+
+    public bool TryHandleKnockback(in EnemyImpactContext context)
+    {
+        var impactType = context.ImpactType;
+        if (impactType != EnemyImpactType.Star && impactType != EnemyImpactType.Knockback)
+            return false;
+        return TryKnockAway(context.SourcePosition, impactType);
+    }
+
+    [Obsolete("Use TryHandleKnockback(in EnemyImpactContext) instead.")]
+    public bool TryKnockAway(Vector2 origin) => TryKnockAway(origin, EnemyImpactType.Knockback);
+
+    private bool TryKnockAway(Vector2 origin, EnemyImpactType impactType)
+    {
+        if (knockedAway) return false;
+
+        startedMovement = true;
+        movementEnabled = true;
+        knockedAway = true;
+
+        var awayX = Mathf.Sign(transform.position.x - origin.x);
+        if (Mathf.Approximately(awayX, 0f)) awayX = moveDirectionX;
+        moveDirectionX = ToDirection(awayX);
+        UpdateFacing(-1f);
+
+        SetCollidersEnabled(false);
+        Body.gravityScale = Mathf.Max(initialGravityScale, knockAwayGravityScale);
+        var velocity = Body.linearVelocity;
+        velocity.x = moveDirectionX * knockAwayHorizontalSpeed;
+        velocity.y = Mathf.Max(velocity.y, bumpUpwardSpeed);
+        Body.linearVelocity = velocity;
+        nextTurnTime = Time.time + turnCooldown;
+        KnockbackApplied?.Invoke(this);
+        KnockbackAppliedWithType?.Invoke(this, impactType);
+        return true;
     }
 
     private void ApplyHorizontalVelocity()
@@ -246,11 +285,18 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
     private bool IsOwnCollider(Collider2D collider)
     {
-        if (!collider) return false;
-        foreach (var localCollider in OwnColliders)
-            if (localCollider == collider)
-                return true;
-        return false;
+        return collider && ownColliderIds.Contains(collider.GetInstanceID());
+    }
+
+    private void RebuildOwnColliderIds()
+    {
+        ownColliderIds.Clear();
+        var localColliders = OwnColliders;
+        for (var i = 0; i < localColliders.Length; i++)
+        {
+            var collider = localColliders[i];
+            if (collider) ownColliderIds.Add(collider.GetInstanceID());
+        }
     }
 
     private void UpdateFacing(float directionY)
