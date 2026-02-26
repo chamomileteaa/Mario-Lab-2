@@ -55,9 +55,7 @@ public class BrickCoin : MonoBehaviour
         if (!scorePopupPrefab) return;
 
         var worldPosition = transform.position + scorePopupOffset;
-        var popupObject = PrefabPoolService.Spawn(scorePopupPrefab, worldPosition, Quaternion.identity);
-        if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
-            popup.Show(scoreValue, worldPosition);
+        GameInitializer.ShowScorePopup(scorePopupPrefab, scoreValue, worldPosition);
     }
 
     private void Launch()

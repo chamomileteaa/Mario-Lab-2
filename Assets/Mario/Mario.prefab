@@ -162,7 +162,12 @@ MonoBehaviour:
   invulnerabilityMinAlpha: 0.35
   invulnerabilityFlickerSpeed: 18
   stompBounceSpeed: 7.5
-  stompContactMaxGap: 0.3
+  stompContactGap:
+    min: -0.55
+    max: 0.3
+  stompContactNormalMinY: 0.2
+  stompContactPointTolerance: 0.08
+  stompMaxUpwardVelocity: 0.75
   smallColliderSize: {x: 0.8, y: 0.9375}
   smallColliderOffset: {x: 0, y: 0.5325}
   bigColliderSize: {x: 0.8, y: 1.9375}
@@ -170,6 +175,11 @@ MonoBehaviour:
   groundCheck: {fileID: 7768019335697351842}
   groundCheckSize: {x: 0.7, y: 0.126}
   groundNormalMinY: 0.55
+  deathPauseDuration: 0.15
+  deathBounceDelay: 0.1
+  deathBounceSpeed: 20
+  deathOffscreenBuffer: 1
+  deathFallbackFallDistance: 8
 --- !u!61 &-988486674633641877
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -292,10 +302,13 @@ MonoBehaviour:
   targets:
   - {fileID: 3752488452943368081}
   - {fileID: 5355163237440689155}
+  referenceCollider: {fileID: -988486674633641877}
   useLocalScale: 1
   flipX: 1
   flipY: 0
   deadzone: 0.01
+  hasReferenceCollider: 1
+  fallbackFlipOffset: {x: 0, y: 0}
 --- !u!1 &6349249289469198896
 GameObject:
   m_ObjectHideFlags: 0

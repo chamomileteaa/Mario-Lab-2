@@ -5,9 +5,10 @@ using UnityEngine;
 [RequireComponent(typeof(EntityController))]
 [RequireComponent(typeof(AnimatorCache))]
 [RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(Collider2D))]
 public class GoombaController : MonoBehaviour, IStompable
 {
-    private const string SquishedTrigger = "squished";
+    private const string SquashTrigger = "squash";
 
     [Header("Stomp")]
     [SerializeField, Min(0.05f)] private float squishDuration = 0.35f;
@@ -21,6 +22,8 @@ public class GoombaController : MonoBehaviour, IStompable
 
     private EntityController entityController;
     private Rigidbody2D body2D;
+    private Collider2D bodyCollider2D;
+    private Animator animatorComponent;
     private AnimatorCache animatorCache;
     private EnemyAudio enemyAudio;
     private Coroutine squishRoutine;
@@ -32,6 +35,8 @@ public class GoombaController : MonoBehaviour, IStompable
 
     private EntityController Entity => entityController ? entityController : entityController = GetComponent<EntityController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
+    private Collider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<Collider2D>();
+    private Animator Animator => animatorComponent ? animatorComponent : animatorComponent = GetComponent<Animator>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
     private EnemyAudio Audio => enemyAudio ? enemyAudio : enemyAudio = GetComponent<EnemyAudio>();
 
@@ -48,7 +53,12 @@ public class GoombaController : MonoBehaviour, IStompable
         defeated = false;
         squished = false;
         gameObject.tag = initialTag;
+        Body.simulated = true;
         Body.gravityScale = initialGravityScale;
+        Body.linearVelocity = Vector2.zero;
+        Body.angularVelocity = 0f;
+        BodyCollider.enabled = true;
+        ResetAnimationState();
         Entity.KnockedAway += OnEntityKnockedAway;
     }
 
@@ -84,11 +94,27 @@ public class GoombaController : MonoBehaviour, IStompable
         Entity.SetMovementEnabled(false);
         Body.linearVelocity = Vector2.zero;
         Body.gravityScale = 0f;
+        Body.simulated = false;
+        BodyCollider.enabled = false;
 
-        Anim.TrySetTrigger(SquishedTrigger);
+        TriggerSquishAnimation();
         SpawnScorePopup();
         Audio?.PlayDeath();
         squishRoutine = StartCoroutine(DespawnAfter(squishDuration));
+    }
+
+    private void TriggerSquishAnimation()
+    {
+        if (Anim.TrySetTrigger(SquashTrigger)) return;
+        Debug.LogWarning($"Missing animator trigger '{SquashTrigger}' on {name}.", this);
+    }
+
+    private void ResetAnimationState()
+    {
+        if (!Animator || !Animator.runtimeAnimatorController) return;
+        Animator.Rebind();
+        Animator.Update(0f);
+        Anim.TryResetTrigger(SquashTrigger);
     }
 
     private void SetDefeatedState()
@@ -117,8 +143,6 @@ public class GoombaController : MonoBehaviour, IStompable
         if (!scorePopupPrefab) return;
 
         var worldPosition = transform.position + scorePopupOffset;
-        var popupObject = PrefabPoolService.Spawn(scorePopupPrefab, worldPosition, Quaternion.identity);
-        if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
-            popup.Show(stompScore, worldPosition);
+        GameInitializer.ShowScorePopup(scorePopupPrefab, stompScore, worldPosition);
     }
 }

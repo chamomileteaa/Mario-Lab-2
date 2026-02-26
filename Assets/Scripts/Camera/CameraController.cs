@@ -11,7 +11,8 @@ public class CameraController : MonoBehaviour
     [Header("Follow")]
     [SerializeField] private Vector2 followOffset = new Vector2(2f, 0f);
     [SerializeField] private Vector2 deadZoneHalfSize = new Vector2(1.2f, 0.6f);
-    [SerializeField] private bool lockVerticalToStart = true;
+    [SerializeField] private bool lockHorizontal;
+    [SerializeField] private bool lockVertical = true;
 
     [Header("Motion")]
     [SerializeField] private Vector2 smoothTime = new Vector2(0.05f, 0.08f);
@@ -23,6 +24,7 @@ public class CameraController : MonoBehaviour
     private readonly List<CameraBounds2D> sceneBounds = new List<CameraBounds2D>();
 
     private Camera sceneCamera;
+    private Camera SceneCamera => sceneCamera ? sceneCamera : sceneCamera = GetComponent<Camera>();
 
     private CameraBounds2D activeBounds;
     public CameraBounds2D ActiveBounds
@@ -39,12 +41,13 @@ public class CameraController : MonoBehaviour
     public event Action<CameraBounds2D> ActiveBoundsChanged;
 
     private Vector2 dampingVelocity;
+    private float lockedX;
     private float lockedY;
     private float maxReachedX;
 
     private void Awake()
     {
-        sceneCamera = GetComponent<Camera>();
+        lockedX = transform.position.x;
         lockedY = transform.position.y;
         maxReachedX = transform.position.x;
 
@@ -89,8 +92,10 @@ public class CameraController : MonoBehaviour
         var currentPosition = transform.position;
         var targetPosition = (Vector2)followTarget.position + followOffset;
 
-        var desiredX = ApplyDeadZone(currentPosition.x, targetPosition.x, deadZoneHalfSize.x);
-        var desiredY = lockVerticalToStart
+        var desiredX = lockHorizontal
+            ? lockedX
+            : ApplyDeadZone(currentPosition.x, targetPosition.x, deadZoneHalfSize.x);
+        var desiredY = lockVertical
             ? lockedY
             : ApplyDeadZone(currentPosition.y, targetPosition.y, deadZoneHalfSize.y);
 
@@ -99,7 +104,7 @@ public class CameraController : MonoBehaviour
         currentPosition.x = SmoothDampOrSnap(currentPosition.x, desiredX, ref dampingVelocity.x, smoothTime.x);
         currentPosition.y = SmoothDampOrSnap(currentPosition.y, desiredY, ref dampingVelocity.y, smoothTime.y);
 
-        currentPosition = sceneCamera.ClampToOrthographicBounds(ActiveBounds.WorldRect, currentPosition);
+        currentPosition = SceneCamera.ClampToOrthographicBounds(ActiveBounds.WorldRect, currentPosition);
         transform.position = currentPosition;
 
         if (preventBacktrackingX) maxReachedX = Mathf.Max(maxReachedX, currentPosition.x);
@@ -195,5 +200,13 @@ public class CameraController : MonoBehaviour
     {
         if (smoothTimeValue <= 0f) return target;
         return Mathf.SmoothDamp(current, target, ref velocity, smoothTimeValue);
+    }
+
+    public void SetAxisLocks(bool horizontalLocked, bool verticalLocked, bool lockToCurrentPosition = true)
+    {
+        if (horizontalLocked && lockToCurrentPosition) lockedX = transform.position.x;
+        if (verticalLocked && lockToCurrentPosition) lockedY = transform.position.y;
+        lockHorizontal = horizontalLocked;
+        lockVertical = verticalLocked;
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [Flags]
@@ -17,6 +18,7 @@ public static class PauseService
     private static int audioLocks;
     private static PauseType activePauseTypes;
     private static float resumeTimeScale = 1f;
+    private static readonly HashSet<int> simulationPauseBypassIds = new HashSet<int>();
 
     public static PauseType ActivePauseTypes => activePauseTypes;
     public static event Action<PauseType> PauseChanged;
@@ -45,11 +47,31 @@ public static class PauseService
 
     public static bool IsPaused(PauseType pauseType) => (activePauseTypes & pauseType) != 0;
 
+    public static bool IsPaused(PauseType pauseType, UnityEngine.Object context)
+    {
+        if (!context) return IsPaused(pauseType);
+
+        if ((pauseType & PauseType.Simulation) != 0 && simulationPauseBypassIds.Contains(context.GetInstanceID()))
+            pauseType &= ~PauseType.Simulation;
+
+        return IsPaused(pauseType);
+    }
+
+    public static void SetSimulationPauseBypass(UnityEngine.Object context, bool enabled)
+    {
+        if (!context) return;
+
+        var id = context.GetInstanceID();
+        if (enabled) simulationPauseBypassIds.Add(id);
+        else simulationPauseBypassIds.Remove(id);
+    }
+
     public static void ClearAll()
     {
         simulationLocks = 0;
         inputLocks = 0;
         audioLocks = 0;
+        simulationPauseBypassIds.Clear();
         RecomputePauseState();
     }
 
@@ -61,6 +83,7 @@ public static class PauseService
         audioLocks = 0;
         activePauseTypes = PauseType.None;
         resumeTimeScale = 1f;
+        simulationPauseBypassIds.Clear();
         AudioListener.pause = false;
     }
 

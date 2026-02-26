@@ -12,22 +12,32 @@ public class ScorePopup : MonoBehaviour
     [SerializeField, Min(0.01f)] private float lifetime = 0.6f;
     [SerializeField, Range(0f, 1f)] private float fadeStartNormalized = 0.45f;
 
+    private static Canvas cachedRootCanvas;
+    private static Camera cachedWorldCamera;
+
     private RectTransform rectTransform;
     private TextMeshProUGUI textLabel;
-    private Canvas canvas;
     private RectTransform canvasRect;
-    private Vector2 startAnchoredPosition;
+    private Camera worldCamera;
     private Color baseColor;
-    private bool hasBaseColor;
+    private Vector2 startAnchoredPosition;
     private Coroutine lifeRoutine;
 
     private RectTransform Rect => rectTransform ? rectTransform : rectTransform = GetComponent<RectTransform>();
     private TextMeshProUGUI Label => textLabel ? textLabel : textLabel = GetComponent<TextMeshProUGUI>();
 
+    private void Awake()
+    {
+        baseColor = Label.color;
+    }
+
     private void OnDisable()
     {
-        StopAllCoroutines();
-        lifeRoutine = null;
+        if (lifeRoutine != null)
+        {
+            StopCoroutine(lifeRoutine);
+            lifeRoutine = null;
+        }
     }
 
     public void SetScore(int value)
@@ -38,14 +48,13 @@ public class ScorePopup : MonoBehaviour
 
     public void Show(int value, Vector3 worldPosition)
     {
-        if (!ResolveCanvas())
+        if (!TryAttachToCanvas())
         {
             PrefabPoolService.Despawn(gameObject);
             return;
         }
 
         SetScore(value);
-        CacheBaseColor();
         Label.color = baseColor;
 
         if (!TryWorldToAnchored(worldPosition, out startAnchoredPosition))
@@ -53,20 +62,14 @@ public class ScorePopup : MonoBehaviour
             PrefabPoolService.Despawn(gameObject);
             return;
         }
-        Rect.anchoredPosition = startAnchoredPosition;
-        StartLife();
-    }
 
-    private void StartLife()
-    {
+        Rect.anchoredPosition = startAnchoredPosition;
         if (lifeRoutine != null) StopCoroutine(lifeRoutine);
         lifeRoutine = StartCoroutine(Life());
     }
 
     private IEnumerator Life()
     {
-        if (!ResolveCanvas()) yield break;
-
         var elapsed = 0f;
         while (elapsed < lifetime)
         {
@@ -85,71 +88,68 @@ public class ScorePopup : MonoBehaviour
             yield return null;
         }
 
-        PrefabPoolService.Despawn(gameObject);
         lifeRoutine = null;
+        PrefabPoolService.Despawn(gameObject);
     }
 
-    private bool ResolveCanvas()
+    private bool TryAttachToCanvas()
     {
-        if (canvas && !canvas.isActiveAndEnabled) canvas = null;
-        if (!canvas)
-        {
-            var parentCanvas = GetComponentInParent<Canvas>();
-            if (parentCanvas && parentCanvas.isActiveAndEnabled && parentCanvas.isRootCanvas)
-                canvas = parentCanvas;
-        }
-        if (!canvas) canvas = FindBestCanvas();
+        var rootCanvas = ResolveRootCanvas();
+        if (!rootCanvas) return false;
 
-        if (!canvas) return false;
-        canvasRect = canvas.transform as RectTransform;
+        canvasRect = rootCanvas.transform as RectTransform;
         if (!canvasRect) return false;
-        if (Rect.parent == canvasRect) return true;
 
-        Rect.SetParent(canvasRect, false);
-        return true;
+        if (Rect.parent != canvasRect)
+            Rect.SetParent(canvasRect, false);
+
+        worldCamera = ResolveWorldCamera(rootCanvas);
+        if (rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay) return true;
+        return worldCamera;
+    }
+
+    private static Canvas ResolveRootCanvas()
+    {
+        if (cachedRootCanvas && cachedRootCanvas.isActiveAndEnabled) return cachedRootCanvas;
+
+        var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (var i = 0; i < canvases.Length; i++)
+        {
+            var canvas = canvases[i];
+            if (!canvas || !canvas.isActiveAndEnabled || !canvas.isRootCanvas) continue;
+            if (canvas.renderMode == RenderMode.WorldSpace) continue;
+            if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                cachedRootCanvas = canvas;
+                return cachedRootCanvas;
+            }
+
+            if (!cachedRootCanvas) cachedRootCanvas = canvas;
+        }
+
+        return cachedRootCanvas;
+    }
+
+    private static Camera ResolveWorldCamera(Canvas canvas)
+    {
+        if (!canvas || canvas.renderMode == RenderMode.ScreenSpaceOverlay) return null;
+        if (canvas.worldCamera) return canvas.worldCamera;
+
+        if (cachedWorldCamera) return cachedWorldCamera;
+        cachedWorldCamera = Camera.main;
+        return cachedWorldCamera;
     }
 
     private bool TryWorldToAnchored(Vector3 worldPosition, out Vector2 anchoredPosition)
     {
-        var worldCamera = Camera.main;
-        var uiCamera = canvas && canvas.renderMode == RenderMode.ScreenSpaceOverlay
-            ? null
-            : canvas && canvas.worldCamera
-                ? canvas.worldCamera
-                : worldCamera;
-        var sourceCamera = worldCamera ? worldCamera : uiCamera;
-        if (!sourceCamera && canvas && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-        {
-            anchoredPosition = default;
-            return false;
-        }
-
-        var screenPoint = RectTransformUtility.WorldToScreenPoint(sourceCamera, worldPosition);
-        var success = RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, uiCamera, out anchoredPosition);
-        return success;
+        var screenPoint = RectTransformUtility.WorldToScreenPoint(worldCamera, worldPosition);
+        return RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, worldCamera, out anchoredPosition);
     }
 
-    private static Canvas FindBestCanvas()
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
     {
-        var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-        Canvas best = null;
-
-        for (var i = 0; i < canvases.Length; i++)
-        {
-            var candidate = canvases[i];
-            if (!candidate || !candidate.isActiveAndEnabled || !candidate.isRootCanvas) continue;
-            if (candidate.renderMode == RenderMode.WorldSpace) continue;
-            if (candidate.renderMode == RenderMode.ScreenSpaceOverlay) return candidate;
-            if (!best) best = candidate;
-        }
-
-        return best;
-    }
-
-    private void CacheBaseColor()
-    {
-        if (hasBaseColor) return;
-        baseColor = Label.color;
-        hasBaseColor = true;
+        cachedRootCanvas = null;
+        cachedWorldCamera = null;
     }
 }

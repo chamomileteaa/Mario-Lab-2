@@ -7,17 +7,7 @@ public class EnemyAudio : MonoBehaviour
 
     public void PlayDeath()
     {
+        if (!audioPlayer || !deathCue) return;
         audioPlayer.Play(deathCue);
-    }
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
     }
 }
