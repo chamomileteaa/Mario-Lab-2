@@ -60,9 +60,13 @@ public class ConditionalFieldDrawer : PropertyDrawer
             return condition.boolValue == data.boolValue;
         }
 
-        if (condition.propertyType == SerializedPropertyType.Enum) return condition.enumValueIndex == data.enumValue;
-        if (condition.propertyType == SerializedPropertyType.Integer) return condition.intValue == data.enumValue;
-        return false;
+        var matches = false;
+        if (condition.propertyType == SerializedPropertyType.Enum) matches = condition.enumValueIndex == data.enumValue;
+        else if (condition.propertyType == SerializedPropertyType.Integer) matches = condition.intValue == data.enumValue;
+        else return false;
+
+        if (data.invertEnumMatch) return !matches;
+        return matches;
     }
 
     private static SerializedProperty FindSiblingProperty(SerializedProperty property, string fieldName)

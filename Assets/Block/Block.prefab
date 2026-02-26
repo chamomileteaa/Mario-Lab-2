@@ -138,11 +138,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Block
   kind: 0
-  breakRule: 1
   contentType: 1
   contentPrefab: {fileID: 2671069506340941707, guid: cfc5b97f7bbba3f4fa938fe56e1320f0, type: 3}
   multiDuration: 5
-  becomeUsedWhenDepleted: 1
+  depletionOutcome: 1
+  breakRule: 1
   startsHidden: 0
   hiddenEditorOpacity: 0.35
   usedSprite: {fileID: -1756900425, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}

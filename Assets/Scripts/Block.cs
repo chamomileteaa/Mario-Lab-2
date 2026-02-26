@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider2D))]
@@ -26,13 +27,23 @@ public class Block : MonoBehaviour
         Multi
     }
 
+    public enum DepletionOutcome
+    {
+        Break = 0,
+        BecomeEmpty = 1
+    }
+
     [Header("Type")]
     [SerializeField] private BlockKind kind = BlockKind.Brick;
-    [SerializeField] private BreakRule breakRule = BreakRule.BigOnly;
+
+    [Header("Content")]
     [SerializeField] private BlockContent contentType = BlockContent.None;
-    [SerializeField] private GameObject contentPrefab;
+    [SerializeField, ConditionalField(nameof(contentType), (int)BlockContent.None, true)] private GameObject contentPrefab;
     [SerializeField, ConditionalField(nameof(contentType), (int)BlockContent.Multi), Min(0.1f)] private float multiDuration = 5f;
-    [SerializeField] private bool becomeUsedWhenDepleted = true;
+
+    [FormerlySerializedAs("becomeUsedWhenDepleted")]
+    [SerializeField] private DepletionOutcome depletionOutcome = DepletionOutcome.BecomeEmpty;
+    [SerializeField, ConditionalField(nameof(depletionOutcome), (int)DepletionOutcome.Break)] private BreakRule breakRule = BreakRule.BigOnly;
 
     [Header("State")]
     [SerializeField] private bool startsHidden;
@@ -81,11 +92,6 @@ public class Block : MonoBehaviour
         if (Application.isPlaying) return;
         CacheSpriteBaseAlpha();
         RefreshVisualState();
-    }
-
-    private void Update()
-    {
-        ExpireMultiContentIfNeeded();
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -152,10 +158,7 @@ public class Block : MonoBehaviour
         StartBump();
 
         if (TryDispense())
-        {
-            if (!HasContentLeft && becomeUsedWhenDepleted) SetUsed();
             return;
-        }
 
         if (kind == BlockKind.Brick && CanBreak(mario))
         {
@@ -163,7 +166,8 @@ public class Block : MonoBehaviour
             return;
         }
 
-        if (kind == BlockKind.Question && becomeUsedWhenDepleted) SetUsed();
+        if (kind == BlockKind.Question && !HasContentLeft && depletionOutcome == DepletionOutcome.BecomeEmpty)
+            SetEmpty();
     }
 
     private void Reveal()
@@ -174,8 +178,7 @@ public class Block : MonoBehaviour
 
     private bool TryDispense()
     {
-        ExpireMultiContentIfNeeded();
-        if (!contentPrefab) return false;
+        if (!HasSpawnableContent) return false;
 
         switch (contentType)
         {
@@ -190,7 +193,7 @@ public class Block : MonoBehaviour
                 if (Time.time >= multiEndTime)
                 {
                     DepleteContent();
-                    return false;
+                    return true;
                 }
 
                 SpawnContent();
@@ -205,17 +208,18 @@ public class Block : MonoBehaviour
     {
         get
         {
-            ExpireMultiContentIfNeeded();
-            if (!contentPrefab) return false;
+            if (!HasSpawnableContent) return false;
 
-                return contentType switch
-                {
-                    BlockContent.Single => true,
-                    BlockContent.Multi => multiEndTime < 0f || Time.time <= multiEndTime,
-                    _ => false
-                };
+            return contentType switch
+            {
+                BlockContent.Single => true,
+                BlockContent.Multi => multiEndTime < 0f || Time.time <= multiEndTime,
+                _ => false
+            };
         }
     }
+
+    private bool HasSpawnableContent => contentType != BlockContent.None && contentPrefab;
 
     private bool CanBreak(MarioController mario)
     {
@@ -227,7 +231,7 @@ public class Block : MonoBehaviour
         };
     }
 
-    private void SetUsed()
+    private void SetEmpty()
     {
         if (isUsed) return;
 
@@ -241,14 +245,31 @@ public class Block : MonoBehaviour
 
     private void Break()
     {
-        if (breakParticles)
+        try
         {
-            var effect = PrefabPoolService.Spawn(breakParticles.gameObject, BoxCollider.bounds.center, Quaternion.identity);
-            if (effect && effect.TryGetComponent<SpriteShardParticles>(out var shardParticles))
-                shardParticles.ApplySprite(Sprite ? Sprite.sprite : null);
+            if (breakParticles)
+            {
+                PrefabPoolService.Spawn(breakParticles.gameObject, BoxCollider.bounds.center, Quaternion.identity);
+            }
         }
+        finally
+        {
+            if (bumpRoutine != null)
+            {
+                StopCoroutine(bumpRoutine);
+                bumpRoutine = null;
+            }
 
-        Destroy(gameObject);
+            foreach (var renderer in GetComponentsInChildren<SpriteRenderer>(true))
+                if (renderer) renderer.enabled = false;
+
+            foreach (var collider in GetComponentsInChildren<Collider2D>(true))
+                if (collider) collider.enabled = false;
+
+            enabled = false;
+            gameObject.SetActive(false);
+            Destroy(gameObject);
+        }
     }
 
     private void RefreshVisualState()
@@ -351,20 +372,16 @@ public class Block : MonoBehaviour
         multiEndTime = -1f;
     }
 
-    private void ExpireMultiContentIfNeeded()
-    {
-        if (contentType != BlockContent.Multi) return;
-        if (multiEndTime < 0f) return;
-        if (Time.time < multiEndTime) return;
-
-        DepleteContent();
-    }
-
     private void DepleteContent()
     {
         contentType = BlockContent.None;
         multiEndTime = -1f;
-        if (!becomeUsedWhenDepleted) return;
-        SetUsed();
+        if (depletionOutcome == DepletionOutcome.Break)
+        {
+            Break();
+            return;
+        }
+
+        SetEmpty();
     }
 }
