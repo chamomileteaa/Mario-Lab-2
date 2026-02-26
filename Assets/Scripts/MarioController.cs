@@ -616,7 +616,8 @@ public class MarioController : MonoBehaviour
 
     private IEnumerator DeathSequence()
     {
-        GameData.Instance.lives--;
+        var gameData = ResolveGameData();
+        if (gameData) gameData.LoseLife();
 
         Body.linearVelocity = Vector2.zero;
         Body.angularVelocity = 0f;
@@ -652,7 +653,7 @@ public class MarioController : MonoBehaviour
         }
 
         deathRoutine = null;
-        if (GameData.Instance.lives <= 0)
+        if (gameData && gameData.lives <= 0)
         {
             SceneManager.LoadScene("GameOver");
             yield break;
@@ -667,5 +668,14 @@ public class MarioController : MonoBehaviour
         var sceneCamera = SceneCamera;
         if (!sceneCamera || !sceneCamera.orthographic) return fallbackCutoffY;
         return sceneCamera.transform.position.y - sceneCamera.orthographicSize - deathOffscreenBuffer;
+    }
+
+    private static GameData ResolveGameData()
+    {
+        if (GameData.Instance) return GameData.Instance;
+
+        var found = FindFirstObjectByType<GameData>(FindObjectsInactive.Include);
+        if (found && !GameData.Instance) GameData.Instance = found;
+        return found;
     }
 }
