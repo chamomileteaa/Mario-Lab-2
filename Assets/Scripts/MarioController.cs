@@ -224,6 +224,11 @@ public class MarioController : MonoBehaviour
         damageInvulnerabilityTimer = damageInvulnerabilityTime;
     }
 
+    public void KillFromOutOfBounds()
+    {
+        ResolveDeath();
+    }
+
     public void SetForm(MarioForm targetForm)
     {
         if (isDead) return;
@@ -560,14 +565,7 @@ public class MarioController : MonoBehaviour
 
     private static bool IsEnemyCollider(Collider2D collider)
     {
-        if (!collider) return false;
-        if (collider.CompareTag("enemy")) return true;
-
-        if (collider.attachedRigidbody && collider.attachedRigidbody.CompareTag("enemy"))
-            return true;
-
-        var transform = collider.transform;
-        return transform && transform.root && transform.root.CompareTag("enemy");
+        return collider.CompareColliderTag("enemy");
     }
 
     private void UpdateInvulnerabilityVisual()

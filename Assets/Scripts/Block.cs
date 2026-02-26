@@ -123,9 +123,8 @@ public class Block : MonoBehaviour
     private bool TryHitFromCollider(Collider2D collider, bool requireUpward)
     {
         if (!collider) return false;
-
-        var mario = collider.GetComponentInParent<MarioController>();
-        if (!mario || !mario.CompareTag("Player")) return false;
+        if (!collider.CompareColliderTag("Player")) return false;
+        if (!collider.TryGetComponentInParent(out MarioController mario)) return false;
 
         var body = collider.attachedRigidbody ? collider.attachedRigidbody : mario.GetComponent<Rigidbody2D>();
         if (!body) return false;

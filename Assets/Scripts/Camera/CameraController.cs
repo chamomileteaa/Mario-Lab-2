@@ -25,6 +25,7 @@ public class CameraController : MonoBehaviour
 
     private Camera sceneCamera;
     private Camera SceneCamera => sceneCamera ? sceneCamera : sceneCamera = GetComponent<Camera>();
+    private Color defaultBackgroundColor;
 
     private CameraBounds2D activeBounds;
     public CameraBounds2D ActiveBounds
@@ -47,12 +48,14 @@ public class CameraController : MonoBehaviour
 
     private void Awake()
     {
+        defaultBackgroundColor = SceneCamera.backgroundColor;
         lockedX = transform.position.x;
         lockedY = transform.position.y;
         maxReachedX = transform.position.x;
 
         CacheSceneBounds();
         UpdateActiveBounds();
+        ApplyBackgroundColor();
     }
 
     private void OnEnable()
@@ -73,6 +76,7 @@ public class CameraController : MonoBehaviour
         if (!enteredBounds.Contains(bounds)) enteredBounds.Add(bounds);
 
         UpdateActiveBounds();
+        ApplyBackgroundColor();
 
         if (bounds.ResetProgressOnEnter) maxReachedX = transform.position.x;
     }
@@ -82,6 +86,7 @@ public class CameraController : MonoBehaviour
         if (!bounds) return;
         enteredBounds.Remove(bounds);
         UpdateActiveBounds();
+        ApplyBackgroundColor();
     }
 
     private void LateUpdate()
@@ -208,5 +213,19 @@ public class CameraController : MonoBehaviour
         if (verticalLocked && lockToCurrentPosition) lockedY = transform.position.y;
         lockHorizontal = horizontalLocked;
         lockVertical = verticalLocked;
+    }
+
+    private void ApplyBackgroundColor()
+    {
+        var camera = SceneCamera;
+        if (!camera) return;
+
+        if (ActiveBounds && ActiveBounds.OverrideBackgroundColor)
+        {
+            camera.backgroundColor = ActiveBounds.BackgroundColor;
+            return;
+        }
+
+        camera.backgroundColor = defaultBackgroundColor;
     }
 }

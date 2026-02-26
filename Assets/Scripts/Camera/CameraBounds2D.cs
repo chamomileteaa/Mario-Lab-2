@@ -10,6 +10,8 @@ public class CameraBounds2D : MonoBehaviour
 
     [field: SerializeField] public int Priority { get; private set; }
     [field: SerializeField] public bool ResetProgressOnEnter { get; private set; }
+    [field: SerializeField] public bool OverrideBackgroundColor { get; private set; }
+    [field: SerializeField] public Color BackgroundColor { get; private set; } = Color.black;
 
     private BoxCollider2D boxCollider;
 
@@ -44,13 +46,13 @@ public class CameraBounds2D : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!other.CompareTag("Player")) return;
+        if (!other.CompareColliderTag("Player")) return;
         MarioEntered?.Invoke(this);
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        if (!other.CompareTag("Player")) return;
+        if (!other.CompareColliderTag("Player")) return;
         MarioExited?.Invoke(this);
     }
 }

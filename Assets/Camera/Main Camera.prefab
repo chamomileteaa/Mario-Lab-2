@@ -153,6 +153,7 @@ MonoBehaviour:
   followTarget: {fileID: 0}
   followOffset: {x: 2, y: 0}
   deadZoneHalfSize: {x: 1.2, y: 0.6}
-  lockVerticalToStart: 0
+  lockHorizontal: 0
+  lockVertical: 0
   smoothTime: {x: 0.05, y: 0.08}
   preventBacktrackingX: 1

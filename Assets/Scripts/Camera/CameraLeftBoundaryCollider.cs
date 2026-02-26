@@ -98,7 +98,7 @@ public class CameraLeftBoundaryCollider : MonoBehaviour
     {
         if (!marioOnlyCollision) return;
         if (!collision.otherCollider) return;
-        if (collision.otherCollider.IsPlayerCollider()) return;
+        if (collision.otherCollider.CompareColliderTag("Player")) return;
 
         var otherBody = collision.otherCollider.attachedRigidbody;
         if (!otherBody)

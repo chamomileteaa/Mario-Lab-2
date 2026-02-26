@@ -220,11 +220,9 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
     private EntityController ResolveOtherEntity(Collision2D collision)
     {
-        if (TryResolveEntityFromRigidbody(collision.rigidbody, out var other))
+        if (TryResolveOtherEntity(collision.collider, out var other))
             return other;
-        if (collision.collider && TryResolveEntityFromRigidbody(collision.collider.attachedRigidbody, out other))
-            return other;
-        if (collision.otherCollider && TryResolveEntityFromRigidbody(collision.otherCollider.attachedRigidbody, out other))
+        if (TryResolveOtherEntity(collision.otherCollider, out other))
             return other;
 
         return null;
@@ -232,17 +230,14 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
     private EntityController ResolveEntityFromCollider(Collider2D collider)
     {
-        if (!collider) return null;
-        if (TryResolveEntityFromRigidbody(collider.attachedRigidbody, out var other))
-            return other;
-        return null;
+        return TryResolveOtherEntity(collider, out var other) ? other : null;
     }
 
-    private bool TryResolveEntityFromRigidbody(Rigidbody2D rigidbody, out EntityController other)
+    private bool TryResolveOtherEntity(Collider2D collider, out EntityController other)
     {
         other = null;
-        if (!rigidbody || rigidbody == Body) return false;
-        if (!rigidbody.TryGetComponent(out other)) return false;
+        if (!collider) return false;
+        if (!collider.TryGetComponentInParent(out other)) return false;
         return other && other != this;
     }
 
