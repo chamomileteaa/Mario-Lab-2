@@ -207,21 +207,25 @@ public class MarioController : MonoBehaviour
 
     private bool TryHandleEnemyContact(Collider2D collider)
     {
-        if (!collider || !collider.CompareTag("enemy")) return false;
+        if (!collider) return false;
+
+        var stompable = collider.GetComponentInParent<IStompable>();
+        var isEnemy = IsEnemyCollider(collider);
+        if (!isEnemy && stompable == null) return false;
         if (isDead) return true;
 
-        if (TryStompEnemy(collider)) return true;
+        if (TryStompEnemy(collider, stompable)) return true;
 
         TakeDamage();
         return true;
     }
 
-    private bool TryStompEnemy(Collider2D enemyCollider)
+    private bool TryStompEnemy(Collider2D enemyCollider, IStompable cachedStompable = null)
     {
         if (Body.linearVelocity.y > 0.05f) return false;
         if (!IsStompContact(enemyCollider.bounds)) return false;
 
-        var stompable = enemyCollider.GetComponentInParent<IStompable>();
+        var stompable = cachedStompable ?? enemyCollider.GetComponentInParent<IStompable>();
         if (stompable == null) return false;
         if (!stompable.TryStomp(this, BodyCollider.bounds.center)) return false;
 
@@ -238,9 +242,11 @@ public class MarioController : MonoBehaviour
         if (marioBounds.min.x >= enemyBounds.max.x - horizontalInset) return false;
 
         var feetGap = marioBounds.min.y - enemyBounds.max.y;
-        if (feetGap < -0.2f) return false;
+        if (feetGap < -0.3f) return false;
         if (feetGap > stompContactMaxGap) return false;
-        if (marioBounds.center.y <= enemyBounds.center.y) return false;
+
+        // Require Mario's feet to be above the enemy midpoint to avoid side hits.
+        if (marioBounds.min.y < enemyBounds.center.y - 0.02f) return false;
 
         return true;
     }
@@ -455,6 +461,18 @@ public class MarioController : MonoBehaviour
         if (!collider) return false;
         if (collider == BodyCollider) return true;
         return collider.attachedRigidbody && collider.attachedRigidbody == Body;
+    }
+
+    private static bool IsEnemyCollider(Collider2D collider)
+    {
+        if (!collider) return false;
+        if (collider.CompareTag("enemy")) return true;
+
+        if (collider.attachedRigidbody && collider.attachedRigidbody.CompareTag("enemy"))
+            return true;
+
+        var transform = collider.transform;
+        return transform && transform.root && transform.root.CompareTag("enemy");
     }
 
     private void UpdateInvulnerabilityVisual()

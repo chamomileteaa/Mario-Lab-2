@@ -3,6 +3,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(SpriteFlipper))]
 public class EntityController : MonoBehaviour, IBlockBumpReactive
 {
     [Flags]
@@ -27,8 +28,7 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
     [SerializeField] private bool moveOnEnable = true;
     [SerializeField] private bool startWhenVisible = true;
     [SerializeField] private bool faceMarioOnSpawn = true;
-    [SerializeField] private Camera visibilityCamera;
-    [SerializeField] private TurnMatrix turnMatrix = TurnMatrix.Walls | TurnMatrix.Entities;
+    [SerializeField] private TurnMatrix turnRules = TurnMatrix.Walls | TurnMatrix.Entities;
     [SerializeField, Min(0f)] private float turnCooldown = 0.1f;
     [SerializeField, Min(0.01f)] private float wallCheckDistance = 0.06f;
 
@@ -36,54 +36,51 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
     [SerializeField] private BlockBumpReaction blockBumpReaction = BlockBumpReaction.Bounce;
     [SerializeField, Min(0f)] private float bumpUpwardSpeed = 3.25f;
     [SerializeField, Min(0f)] private float knockAwayHorizontalSpeed = 2f;
-    [SerializeField] private bool keepMovingWhenKnockedAway;
+    [SerializeField, Min(0f)] private float knockAwayGravityScale = 1f;
 
     private Rigidbody2D body2D;
-    private Collider2D mainCollider;
     private SpriteFlipper spriteFlipper;
     private bool movementEnabled;
-    private bool isKnockedAway;
-    private bool hasStartedMovement;
+    private bool startedMovement;
+    private bool knockedAway;
     private float nextTurnTime;
+    private float initialGravityScale;
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
-    private Collider2D MainCollider => mainCollider ? mainCollider : mainCollider = ResolveMainCollider();
-    private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
+    private Collider2D MainCollider => GetComponent<Collider2D>();
+    private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponent<SpriteFlipper>();
 
     public event Action<EntityController> KnockedAway;
-    public bool IsKnockedAway => isKnockedAway;
-
-    private void Reset() => EnsureCollider();
+    public bool IsKnockedAway => knockedAway;
 
     private void Awake()
     {
-        EnsureCollider();
-        moveDirectionX = NormalizeDirection(moveDirectionX);
-        ApplyFacing();
+        moveDirectionX = ToDirection(moveDirectionX);
+        initialGravityScale = Body.gravityScale;
+        UpdateFacing(1f);
     }
 
     private void OnValidate()
     {
-        if (!Application.isPlaying) EnsureCollider();
-        moveDirectionX = NormalizeDirection(moveDirectionX);
+        moveDirectionX = ToDirection(moveDirectionX);
     }
 
     private void OnEnable()
     {
-        CacheVisibilityCamera();
         if (faceMarioOnSpawn) FaceMarioIfFound();
 
-        hasStartedMovement = !startWhenVisible;
-        movementEnabled = moveOnEnable && hasStartedMovement;
-        isKnockedAway = false;
+        startedMovement = !startWhenVisible;
+        movementEnabled = moveOnEnable && startedMovement;
+        knockedAway = false;
         nextTurnTime = 0f;
+        Body.gravityScale = initialGravityScale;
+        SetCollidersEnabled(true);
         Body.WakeUp();
-        ApplyFacing();
+        UpdateFacing(1f);
     }
 
     private void OnDisable()
     {
-        if (!Body) return;
         var velocity = Body.linearVelocity;
         velocity.x = 0f;
         Body.linearVelocity = velocity;
@@ -91,30 +88,31 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
     private void FixedUpdate()
     {
-        if (!TryActivateMovement()) return;
-
+        if (!TryStartMovement()) return;
         if (!movementEnabled) return;
 
         ApplyHorizontalVelocity();
-        if (isKnockedAway) return;
+        if (knockedAway) return;
         if (Time.time < nextTurnTime) return;
 
-        if (HasTurn(TurnMatrix.Walls) && HasWallAhead())
+        if ((turnRules & TurnMatrix.Walls) != 0 && HasWallAhead())
             ReverseDirection();
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (!HasTurn(TurnMatrix.Entities) || isKnockedAway) return;
+        if ((turnRules & TurnMatrix.Entities) == 0 || knockedAway) return;
         if (Time.time < nextTurnTime) return;
 
-        if (TryGetOtherEntity(collision.collider, out var other) && other != this)
+        var other = collision.collider ? collision.collider.GetComponentInParent<EntityController>() : null;
+        if (other && other != this)
         {
             ReverseDirection();
             return;
         }
 
-        if (TryGetOtherEntity(collision.otherCollider, out other) && other != this)
+        other = collision.otherCollider ? collision.otherCollider.GetComponentInParent<EntityController>() : null;
+        if (other && other != this)
             ReverseDirection();
     }
 
@@ -130,17 +128,14 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
     public void SetDirection(float directionX)
     {
-        var normalized = NormalizeDirection(directionX);
+        var normalized = ToDirection(directionX);
         if (Mathf.Approximately(normalized, moveDirectionX)) return;
         moveDirectionX = normalized;
         nextTurnTime = Time.time + turnCooldown;
-        ApplyFacing();
+        UpdateFacing(knockedAway ? -1f : 1f);
     }
 
-    public void ReverseDirection()
-    {
-        SetDirection(-moveDirectionX);
-    }
+    public void ReverseDirection() => SetDirection(-moveDirectionX);
 
     public void OnBlockBumped(BlockBumpContext context)
     {
@@ -159,13 +154,17 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
             case BlockBumpReaction.KnockAway:
             {
-                isKnockedAway = true;
+                startedMovement = true;
+                movementEnabled = true;
+                knockedAway = true;
 
                 var awayX = Mathf.Sign(transform.position.x - context.Origin.x);
                 if (Mathf.Approximately(awayX, 0f)) awayX = moveDirectionX;
-                moveDirectionX = NormalizeDirection(awayX);
-                ApplyFacing();
+                moveDirectionX = ToDirection(awayX);
+                UpdateFacing(-1f);
 
+                SetCollidersEnabled(false);
+                Body.gravityScale = Mathf.Max(initialGravityScale, knockAwayGravityScale);
                 var velocity = Body.linearVelocity;
                 velocity.x = moveDirectionX * knockAwayHorizontalSpeed;
                 velocity.y = Mathf.Max(velocity.y, bumpUpwardSpeed);
@@ -179,7 +178,7 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
     private void ApplyHorizontalVelocity()
     {
-        if (isKnockedAway && !keepMovingWhenKnockedAway) return;
+        if (knockedAway) return;
 
         var velocity = Body.linearVelocity;
         var targetX = moveDirectionX * moveSpeed;
@@ -189,70 +188,38 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
     private bool HasWallAhead()
     {
+        if (!MainCollider) return false;
+
         var bounds = MainCollider.bounds;
         var origin = new Vector2(bounds.center.x + moveDirectionX * (bounds.extents.x + 0.01f), bounds.center.y);
         var hit = Physics2D.Raycast(origin, new Vector2(moveDirectionX, 0f), wallCheckDistance);
-        return hit.collider && !hit.collider.isTrigger && !IsOwnCollider(hit.collider);
+        if (!hit.collider || hit.collider.isTrigger) return false;
+        return hit.rigidbody != Body;
     }
 
-    private bool TryGetOtherEntity(Collider2D collider, out EntityController other)
+    private void UpdateFacing(float directionY)
     {
-        other = null;
-        if (!collider) return false;
-        other = collider.GetComponentInParent<EntityController>();
-        return other;
+        Flipper.SetDirection(new Vector2(moveDirectionX, directionY));
     }
 
-    private bool HasTurn(TurnMatrix turn)
-    {
-        return (turnMatrix & turn) != 0;
-    }
-
-    private void ApplyFacing()
-    {
-        Flipper?.SetDirection(new Vector2(moveDirectionX, 0f));
-    }
-
-    private Collider2D ResolveMainCollider()
-    {
-        var colliders = GetComponents<Collider2D>();
-        for (var i = 0; i < colliders.Length; i++)
-            if (colliders[i] && !colliders[i].isTrigger)
-                return colliders[i];
-        return colliders.Length > 0 ? colliders[0] : null;
-    }
-
-    private void EnsureCollider()
-    {
-        if (GetComponent<Collider2D>()) return;
-        gameObject.AddComponent<BoxCollider2D>();
-    }
-
-    private bool IsOwnCollider(Collider2D collider)
-    {
-        if (!collider) return false;
-        if (collider == MainCollider) return true;
-        return collider.attachedRigidbody && collider.attachedRigidbody == Body;
-    }
-
-    private static float NormalizeDirection(float value)
+    private static float ToDirection(float value)
     {
         return value >= 0f ? 1f : -1f;
     }
 
-    private bool TryActivateMovement()
+    private bool TryStartMovement()
     {
-        if (hasStartedMovement) return true;
+        if (startedMovement) return true;
         if (startWhenVisible && !IsVisibleToStartCamera()) return false;
 
-        hasStartedMovement = true;
+        startedMovement = true;
         if (moveOnEnable) movementEnabled = true;
         return true;
     }
 
     private bool IsVisibleToStartCamera()
     {
-        var sceneCamera = GetVisibilityCamera();
+        var sceneCamera = Camera.main;
         if (!sceneCamera || !sceneCamera.orthographic) return true;
 
         if (MainCollider)
@@ -271,16 +238,14 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
         moveDirectionX = delta > 0f ? 1f : -1f;
     }
 
-    private Camera GetVisibilityCamera()
+    private void SetCollidersEnabled(bool enabled)
     {
-        if (visibilityCamera) return visibilityCamera;
-        CacheVisibilityCamera();
-        return visibilityCamera;
-    }
-
-    private void CacheVisibilityCamera()
-    {
-        if (visibilityCamera) return;
-        visibilityCamera = Camera.main;
+        var localColliders = GetComponentsInChildren<Collider2D>(true);
+        for (var i = 0; i < localColliders.Length; i++)
+        {
+            var collider = localColliders[i];
+            if (!collider) continue;
+            collider.enabled = enabled;
+        }
     }
 }

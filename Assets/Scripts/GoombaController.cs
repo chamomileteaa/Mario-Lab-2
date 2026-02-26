@@ -1,18 +1,19 @@
-using System;
 using System.Collections;
 using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(EntityController))]
 [RequireComponent(typeof(AnimatorCache))]
+[RequireComponent(typeof(Rigidbody2D))]
 public class GoombaController : MonoBehaviour, IStompable
 {
     private const string SquishedTrigger = "squished";
-    private const string LegacySquashTrigger = "squash";
 
     [Header("Stomp")]
     [SerializeField, Min(0.05f)] private float squishDuration = 0.35f;
-    [SerializeField, Range(0.1f, 1f)] private float squishHeightScale = 0.5f;
+    [SerializeField, Min(0)] private int stompScore = 100;
+    [SerializeField] private GameObject scorePopupPrefab;
+    [SerializeField] private Vector3 scorePopupOffset = new Vector3(0f, 0.35f, 0f);
 
     [Header("Knock Away")]
     [SerializeField] private bool defeatWhenKnockedAway = true;
@@ -23,7 +24,6 @@ public class GoombaController : MonoBehaviour, IStompable
     private AnimatorCache animatorCache;
     private EnemyAudio enemyAudio;
     private Coroutine squishRoutine;
-    private Vector3 initialScale;
     private float initialGravityScale = 1f;
     private string initialTag;
     private float spawnY;
@@ -37,9 +37,8 @@ public class GoombaController : MonoBehaviour, IStompable
 
     private void Awake()
     {
-        initialScale = transform.localScale;
         spawnY = transform.position.y;
-        if (Body) initialGravityScale = Body.gravityScale;
+        initialGravityScale = Body.gravityScale;
         initialTag = gameObject.tag;
     }
 
@@ -48,16 +47,14 @@ public class GoombaController : MonoBehaviour, IStompable
         spawnY = transform.position.y;
         defeated = false;
         squished = false;
-        transform.localScale = initialScale;
         gameObject.tag = initialTag;
-        if (Body) Body.gravityScale = initialGravityScale;
+        Body.gravityScale = initialGravityScale;
         Entity.KnockedAway += OnEntityKnockedAway;
     }
 
     private void OnDisable()
     {
-        if (entityController)
-            entityController.KnockedAway -= OnEntityKnockedAway;
+        Entity.KnockedAway -= OnEntityKnockedAway;
 
         if (squishRoutine == null) return;
         StopCoroutine(squishRoutine);
@@ -85,18 +82,11 @@ public class GoombaController : MonoBehaviour, IStompable
         squished = true;
 
         Entity.SetMovementEnabled(false);
-        if (Body)
-        {
-            Body.linearVelocity = Vector2.zero;
-            Body.gravityScale = 0f;
-        }
+        Body.linearVelocity = Vector2.zero;
+        Body.gravityScale = 0f;
 
-        var squishedScale = initialScale;
-        squishedScale.y *= squishHeightScale;
-        transform.localScale = squishedScale;
-
-        if (!Anim.TrySetTrigger(SquishedTrigger))
-            Anim.TrySetTrigger(LegacySquashTrigger);
+        Anim.TrySetTrigger(SquishedTrigger);
+        SpawnScorePopup();
         Audio?.PlayDeath();
         squishRoutine = StartCoroutine(DespawnAfter(squishDuration));
     }
@@ -120,5 +110,15 @@ public class GoombaController : MonoBehaviour, IStompable
         yield return new WaitForSeconds(delay);
         PrefabPoolService.Despawn(gameObject);
         squishRoutine = null;
+    }
+
+    private void SpawnScorePopup()
+    {
+        if (!scorePopupPrefab) return;
+
+        var worldPosition = transform.position + scorePopupOffset;
+        var popupObject = PrefabPoolService.Spawn(scorePopupPrefab, worldPosition, Quaternion.identity);
+        if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
+            popup.Show(stompScore, worldPosition);
     }
 }

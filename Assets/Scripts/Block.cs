@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider2D))]
@@ -45,7 +44,6 @@ public class Block : MonoBehaviour
     [SerializeField, ConditionalField(nameof(contentType), (int)BlockContent.None, true)] private GameObject contentPrefab;
     [SerializeField, ConditionalField(nameof(contentType), (int)BlockContent.Multi), Min(0.1f)] private float multiDuration = 5f;
 
-    [FormerlySerializedAs("becomeUsedWhenDepleted")]
     [SerializeField, ConditionalField(nameof(kind), (int)BlockKind.Brick)] private DepletionOutcome depletionOutcome = DepletionOutcome.Exhausted;
     [SerializeField, ConditionalField(nameof(depletionOutcome), (int)DepletionOutcome.Break)] private BreakRule breakRule = BreakRule.BigOnly;
 
