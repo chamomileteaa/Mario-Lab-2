@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7923207377881938559}
   - component: {fileID: 9037850532017707949}
   - component: {fileID: 6294500487806381454}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Sky and Clouds
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -31662,7 +31662,7 @@ GameObject:
   - component: {fileID: 351761704033513432}
   - component: {fileID: 8202829202997715997}
   - component: {fileID: 1486997443566187304}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Hills and Grass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
