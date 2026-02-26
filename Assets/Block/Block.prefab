@@ -141,7 +141,7 @@ MonoBehaviour:
   contentType: 1
   contentPrefab: {fileID: 2671069506340941707, guid: cfc5b97f7bbba3f4fa938fe56e1320f0, type: 3}
   multiDuration: 5
-  depletionOutcome: 1
+  depletionOutcome: 0
   breakRule: 1
   startsHidden: 0
   hiddenEditorOpacity: 0.35
