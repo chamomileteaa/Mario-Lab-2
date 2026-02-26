@@ -39,6 +39,8 @@ public class MarioController : MonoBehaviour
     [Header("Form")]
     [SerializeField] private MarioForm initialForm = MarioForm.Small;
     [SerializeField, Min(0f)] private float damageInvulnerabilityTime = 1f;
+    [SerializeField, Range(0.05f, 1f)] private float invulnerabilityMinAlpha = 0.35f;
+    [SerializeField, Min(1f)] private float invulnerabilityFlickerSpeed = 18f;
 
     [Header("Collider")]
     [SerializeField, Min(0.01f)] private Vector2 smallColliderSize = new Vector2(1f, 1f);
@@ -69,6 +71,7 @@ public class MarioController : MonoBehaviour
     private float shortJumpSpeed;
     private MarioForm form;
     private MarioForm pendingGrowForm;
+    private SpriteRenderer[] spriteRenderers;
     private readonly Collider2D[] groundHits = new Collider2D[4];
     private readonly ContactPoint2D[] groundContacts = new ContactPoint2D[8];
     private readonly Collider2D[] resizeHits = new Collider2D[4];
@@ -78,6 +81,9 @@ public class MarioController : MonoBehaviour
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
     private Transform GroundCheck => groundCheck ? groundCheck : groundCheck = transform.Find("GroundCheck");
     private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
+    private SpriteRenderer[] SpriteRenderers => spriteRenderers != null && spriteRenderers.Length > 0
+        ? spriteRenderers
+        : spriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
 
     public MarioForm Form => form;
     public bool IsSmall => form == MarioForm.Small;
@@ -104,6 +110,7 @@ public class MarioController : MonoBehaviour
 
     private void OnDisable()
     {
+        SetSpriteOpacity(1f);
         jumpAction.SetEnabled(false);
         moveAction.SetEnabled(false);
     }
@@ -122,6 +129,7 @@ public class MarioController : MonoBehaviour
         isGrounded = CheckGrounded();
         coyoteTimer = isGrounded ? coyoteTime : Mathf.Max(0f, coyoteTimer - Time.deltaTime);
         damageInvulnerabilityTimer = Mathf.Max(0f, damageInvulnerabilityTimer - Time.deltaTime);
+        UpdateInvulnerabilityVisual();
 
         var jumpPressed = !PauseService.IsPaused(PauseType.Input) && (jumpAction?.action?.WasPressedThisFrame() ?? false);
         jumpBufferTimer = jumpPressed ? jumpBufferTime : Mathf.Max(0f, jumpBufferTimer - Time.deltaTime);
@@ -299,6 +307,7 @@ public class MarioController : MonoBehaviour
     {
         isDead = true;
         pendingGrow = false;
+        SetSpriteOpacity(1f);
         Anim.TrySetTrigger("die");
 
         GameData.lives--;
@@ -383,5 +392,31 @@ public class MarioController : MonoBehaviour
         if (!collider) return false;
         if (collider == BodyCollider) return true;
         return collider.attachedRigidbody && collider.attachedRigidbody == Body;
+    }
+
+    private void UpdateInvulnerabilityVisual()
+    {
+        if (damageInvulnerabilityTimer <= 0f)
+        {
+            SetSpriteOpacity(1f);
+            return;
+        }
+
+        var pulse = Mathf.PingPong(Time.time * invulnerabilityFlickerSpeed, 1f);
+        var alpha = Mathf.Lerp(invulnerabilityMinAlpha, 1f, pulse);
+        SetSpriteOpacity(alpha);
+    }
+
+    private void SetSpriteOpacity(float alpha)
+    {
+        var renderers = SpriteRenderers;
+        for (var i = 0; i < renderers.Length; i++)
+        {
+            var renderer = renderers[i];
+            if (!renderer) continue;
+            var color = renderer.color;
+            color.a = alpha;
+            renderer.color = color;
+        }
     }
 }

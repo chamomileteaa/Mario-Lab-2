@@ -30,19 +30,19 @@ public class Block : MonoBehaviour
     public enum DepletionOutcome
     {
         Break = 0,
-        BecomeEmpty = 1
+        Exhausted = 1
     }
 
     [Header("Type")]
     [SerializeField] private BlockKind kind = BlockKind.Brick;
 
     [Header("Content")]
-    [SerializeField] private BlockContent contentType = BlockContent.None;
+    [SerializeField, ConditionalField(nameof(kind), (int)BlockKind.Solid, true)] private BlockContent contentType = BlockContent.None;
     [SerializeField, ConditionalField(nameof(contentType), (int)BlockContent.None, true)] private GameObject contentPrefab;
     [SerializeField, ConditionalField(nameof(contentType), (int)BlockContent.Multi), Min(0.1f)] private float multiDuration = 5f;
 
     [FormerlySerializedAs("becomeUsedWhenDepleted")]
-    [SerializeField] private DepletionOutcome depletionOutcome = DepletionOutcome.BecomeEmpty;
+    [SerializeField, ConditionalField(nameof(kind), (int)BlockKind.Brick)] private DepletionOutcome depletionOutcome = DepletionOutcome.Exhausted;
     [SerializeField, ConditionalField(nameof(depletionOutcome), (int)DepletionOutcome.Break)] private BreakRule breakRule = BreakRule.BigOnly;
 
     [Header("State")]
@@ -79,6 +79,7 @@ public class Block : MonoBehaviour
 
     private void Awake()
     {
+        NormalizeByKind();
         initialTriggerState = BoxCollider.isTrigger;
         CacheSpriteBaseAlpha();
         ResetContentState();
@@ -90,6 +91,7 @@ public class Block : MonoBehaviour
     private void OnValidate()
     {
         if (Application.isPlaying) return;
+        NormalizeByKind();
         CacheSpriteBaseAlpha();
         RefreshVisualState();
     }
@@ -166,7 +168,7 @@ public class Block : MonoBehaviour
             return;
         }
 
-        if (kind == BlockKind.Question && !HasContentLeft && depletionOutcome == DepletionOutcome.BecomeEmpty)
+        if (kind == BlockKind.Question && !HasContentLeft && depletionOutcome == DepletionOutcome.Exhausted)
             SetEmpty();
     }
 
@@ -223,6 +225,7 @@ public class Block : MonoBehaviour
 
     private bool CanBreak(MarioController mario)
     {
+        if (kind != BlockKind.Brick) return false;
         return breakRule switch
         {
             BreakRule.Always => true,
@@ -376,12 +379,28 @@ public class Block : MonoBehaviour
     {
         contentType = BlockContent.None;
         multiEndTime = -1f;
-        if (depletionOutcome == DepletionOutcome.Break)
+        if (kind == BlockKind.Brick && depletionOutcome == DepletionOutcome.Break)
         {
             Break();
             return;
         }
 
         SetEmpty();
+    }
+
+    private void NormalizeByKind()
+    {
+        if (kind != BlockKind.Brick)
+        {
+            depletionOutcome = DepletionOutcome.Exhausted;
+            breakRule = BreakRule.Never;
+        }
+
+        if (kind == BlockKind.Solid)
+        {
+            contentType = BlockContent.None;
+            contentPrefab = null;
+            multiEndTime = -1f;
+        }
     }
 }
