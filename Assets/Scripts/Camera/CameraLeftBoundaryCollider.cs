@@ -10,6 +10,7 @@ public class CameraLeftBoundaryCollider : MonoBehaviour
     [SerializeField, Min(0f)] private float extraHeight = 100f;
     [SerializeField] private float wallEdgeOffset;
     [SerializeField] private bool followCameraY = true;
+    [SerializeField] private bool marioOnlyCollision = true;
 
     private Rigidbody2D body2D;
     private BoxCollider2D boxCollider2D;
@@ -48,6 +49,16 @@ public class CameraLeftBoundaryCollider : MonoBehaviour
         SyncToCamera();
     }
 
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        IgnoreIfNotMario(collision);
+    }
+
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        IgnoreIfNotMario(collision);
+    }
+
     private void SetupComponents()
     {
         var rigidbody2D = Body;
@@ -81,5 +92,27 @@ public class CameraLeftBoundaryCollider : MonoBehaviour
         var targetY = followCameraY ? sceneCamera.transform.position.y : initialY;
 
         Body.position = new Vector2(targetX, targetY);
+    }
+
+    private void IgnoreIfNotMario(Collision2D collision)
+    {
+        if (!marioOnlyCollision) return;
+        if (!collision.otherCollider) return;
+        if (collision.otherCollider.IsPlayerCollider()) return;
+
+        var otherBody = collision.otherCollider.attachedRigidbody;
+        if (!otherBody)
+        {
+            Physics2D.IgnoreCollision(Box, collision.otherCollider, true);
+            return;
+        }
+
+        var otherColliders = otherBody.GetComponents<Collider2D>();
+        for (var i = 0; i < otherColliders.Length; i++)
+        {
+            var otherCollider = otherColliders[i];
+            if (!otherCollider) continue;
+            Physics2D.IgnoreCollision(Box, otherCollider, true);
+        }
     }
 }
