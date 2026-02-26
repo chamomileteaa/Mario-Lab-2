@@ -25,6 +25,9 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
     [SerializeField, Min(0f)] private float acceleration = 40f;
     [SerializeField, Range(-1f, 1f)] private float moveDirectionX = -1f;
     [SerializeField] private bool moveOnEnable = true;
+    [SerializeField] private bool startWhenVisible = true;
+    [SerializeField] private bool faceMarioOnSpawn = true;
+    [SerializeField] private Camera visibilityCamera;
     [SerializeField] private TurnMatrix turnMatrix = TurnMatrix.Walls | TurnMatrix.Entities;
     [SerializeField, Min(0f)] private float turnCooldown = 0.1f;
     [SerializeField, Min(0.01f)] private float wallCheckDistance = 0.06f;
@@ -40,6 +43,7 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
     private SpriteFlipper spriteFlipper;
     private bool movementEnabled;
     private bool isKnockedAway;
+    private bool hasStartedMovement;
     private float nextTurnTime;
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
@@ -66,7 +70,11 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
     private void OnEnable()
     {
-        movementEnabled = moveOnEnable;
+        CacheVisibilityCamera();
+        if (faceMarioOnSpawn) FaceMarioIfFound();
+
+        hasStartedMovement = !startWhenVisible;
+        movementEnabled = moveOnEnable && hasStartedMovement;
         isKnockedAway = false;
         nextTurnTime = 0f;
         Body.WakeUp();
@@ -83,6 +91,8 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
     private void FixedUpdate()
     {
+        if (!TryActivateMovement()) return;
+
         if (!movementEnabled) return;
 
         ApplyHorizontalVelocity();
@@ -228,5 +238,49 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
     private static float NormalizeDirection(float value)
     {
         return value >= 0f ? 1f : -1f;
+    }
+
+    private bool TryActivateMovement()
+    {
+        if (hasStartedMovement) return true;
+        if (startWhenVisible && !IsVisibleToStartCamera()) return false;
+
+        hasStartedMovement = true;
+        if (moveOnEnable) movementEnabled = true;
+        return true;
+    }
+
+    private bool IsVisibleToStartCamera()
+    {
+        var sceneCamera = GetVisibilityCamera();
+        if (!sceneCamera || !sceneCamera.orthographic) return true;
+
+        if (MainCollider)
+            return sceneCamera.OverlapsOrthographicView(MainCollider.bounds);
+
+        return sceneCamera.ContainsOrthographicPoint(transform.position);
+    }
+
+    private void FaceMarioIfFound()
+    {
+        var mario = GameObject.FindGameObjectWithTag("Player");
+        if (!mario) return;
+
+        var delta = mario.transform.position.x - transform.position.x;
+        if (Mathf.Abs(delta) <= 0.001f) return;
+        moveDirectionX = delta > 0f ? 1f : -1f;
+    }
+
+    private Camera GetVisibilityCamera()
+    {
+        if (visibilityCamera) return visibilityCamera;
+        CacheVisibilityCamera();
+        return visibilityCamera;
+    }
+
+    private void CacheVisibilityCamera()
+    {
+        if (visibilityCamera) return;
+        visibilityCamera = Camera.main;
     }
 }

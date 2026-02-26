@@ -159,15 +159,17 @@ MonoBehaviour:
   jumpBufferTime: 0.1
   initialForm: 0
   damageInvulnerabilityTime: 1
+  invulnerabilityMinAlpha: 0.35
+  invulnerabilityFlickerSpeed: 18
+  stompBounceSpeed: 7.5
+  stompContactMaxGap: 0.3
   smallColliderSize: {x: 0.8, y: 0.9375}
   smallColliderOffset: {x: 0, y: 0.5325}
   bigColliderSize: {x: 0.8, y: 1.9375}
   bigColliderOffset: {x: 0, y: 1.0325}
   groundCheck: {fileID: 7768019335697351842}
-  groundCheckSize: {x: 0.79, y: 0.126}
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 64
+  groundCheckSize: {x: 0.7, y: 0.126}
+  groundNormalMinY: 0.55
 --- !u!61 &-988486674633641877
 BoxCollider2D:
   m_ObjectHideFlags: 0

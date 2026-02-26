@@ -70,6 +70,8 @@ MonoBehaviour:
   acceleration: 40
   moveDirectionX: -1
   moveOnEnable: 1
+  startWhenVisible: 1
+  faceMarioOnSpawn: 1
   turnMatrix: 3
   turnCooldown: 0.1
   wallCheckDistance: 0.06
