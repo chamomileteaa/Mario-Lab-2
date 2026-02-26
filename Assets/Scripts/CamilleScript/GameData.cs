@@ -1,23 +1,69 @@
 using UnityEngine;
 
-public class GameData 
+public class GameData : MonoBehaviour
 {
 
-    public static int lives = 3; //static = only one version/copy of this variable
-    public static int startLives = 3; 
+    // Singleton instance
+    public static GameData Instance;
 
-    public static int coins = 0;
-    public static int startCoins = 0;
+    public int lives = 3; //static = only one version/copy of this variable
+    public int score = 0; //static stays same until game over
 
-    public static int score = 0;
-    public static int startScore = 0;
+    public int coins = 0; //resets at gameover
+    public float timer = 400f;
 
 
-        public static void Reset()
+    private void Awake()
     {
-        lives = startLives;
-        coins = startCoins;
-        score = startScore;
+        // Singleton pattern
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
-    
+
+        public  void ResetAll()
+    {
+        lives = 3;
+        score = 0;
+        coins = 0;
+        timer = 400f;
+    }
+
+    public  void ResetLevel()
+    {
+        coins = 0;
+        timer = 400f;
+    }
+
+    //
+       public void AddCoin()
+    {
+        coins++;
+        if (coins >= 100)
+        {
+            coins = 0;
+            AddLife();
+        }
+    }
+
+    public void AddLife()
+    {
+        lives++;
+    }
+
+    public void AddScore(int value)
+    {
+        score += value;
+    }
+
+    public void LoseLife()
+    {
+        lives--;
+    }
 }
+    

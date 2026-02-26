@@ -19,6 +19,8 @@ public class UIScript : MonoBehaviour
 
     public TMP_Text scoreTxt;
 
+    public GameManager gameManager;
+
     //add audio here whenever coin collected??
 
 
@@ -39,7 +41,8 @@ public class UIScript : MonoBehaviour
         else if (!gameOver)
         {
             gameOver = true;
-            GameManager.Dead();
+            if (gameManager != null)
+                gameManager.Dead();
         }
 
     }
@@ -49,7 +52,7 @@ public class UIScript : MonoBehaviour
     public void UpdateLives()
     {
         if (livesTxt != null)
-        livesTxt.text = GameData.lives.ToString("0");
+        livesTxt.text = GameData.Instance.lives.ToString("0");
         //only on beginning transition scene
         //change to mario sprite
     }
@@ -57,14 +60,14 @@ public class UIScript : MonoBehaviour
     public void UpdateCoins()
     {
         if (coinsTxt != null)
-        coinsTxt.text = GameData.coins.ToString("00");
+        coinsTxt.text = GameData.Instance.coins.ToString("00");
         //change to coin sprite
     }
 
     public void UpdateScore()
     {
         if (scoreTxt != null)
-        scoreTxt.text = "MARIO " + GameData.score.ToString("000000");
+        scoreTxt.text = "MARIO " + GameData.Instance.score.ToString("000000");
     }
 
     public void UpdateUI()
