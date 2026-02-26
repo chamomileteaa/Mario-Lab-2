@@ -9,6 +9,10 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(AnimatorCache))]
 public class MarioController : MonoBehaviour
 {
+    //updates UI when collision
+    public GameManager gameManager;
+    public UIScript ui;
+
     public enum MarioForm
     {
         Small = 0,
@@ -197,6 +201,39 @@ public class MarioController : MonoBehaviour
         if (stompable != null) return;
         if (!IsEnemyCollider(collision)) return;
         TakeDamage();
+
+//if mario interacts update UI
+    
+    if (collision.CompareTag("coin"))
+    {
+        GameData.Instance.AddCoin();  
+        Destroy(collision.gameObject); 
+        if (ui != null) ui.UpdateUI();
+    }
+
+    if (collision.CompareTag("1up"))
+    {
+        GameData.Instance.AddLife();  
+        Destroy(collision.gameObject); // destroy the 1up
+        if (ui != null) ui.UpdateUI();
+    }
+
+    if (collision.CompareTag("enemy"))
+    {
+        // lose life and check death
+        GameData.Instance.LoseLife();
+
+        if (GameData.Instance.lives <= 0)
+        {
+            gameManager.GameOver(); 
+        }
+        else
+        {
+            // reload scene
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            UnityEngine.SceneManagement.SceneManager.LoadScene(scene.name);
+        }
+    }
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -586,7 +623,7 @@ public class MarioController : MonoBehaviour
 
     private IEnumerator DeathSequence()
     {
-        GameData.lives--;
+        GameData.Instance.lives--;
 
         Body.linearVelocity = Vector2.zero;
         Body.angularVelocity = 0f;
@@ -622,7 +659,7 @@ public class MarioController : MonoBehaviour
         }
 
         deathRoutine = null;
-        if (GameData.lives <= 0)
+        if (GameData.Instance.lives <= 0)
         {
             SceneManager.LoadScene("GameOver");
             yield break;
