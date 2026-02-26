@@ -288,11 +288,21 @@ public class MarioController : MonoBehaviour
     private void HandleEnemyCollision(Collision2D collision)
     {
         if (isDead) return;
-
-        var enemyCollider = collision.otherCollider;
-        if (!enemyCollider || IsOwnCollider(enemyCollider)) return;
+        var enemyCollider = ResolveEnemyCollider(collision);
+        if (!enemyCollider) return;
         var isStompContact = IsStompCollision(collision, enemyCollider.bounds);
         TryHandleEnemyContact(enemyCollider, isStompContact);
+    }
+
+    private Collider2D ResolveEnemyCollider(Collision2D collision)
+    {
+        var primary = collision.collider;
+        if (primary && !IsOwnCollider(primary)) return primary;
+
+        var secondary = collision.otherCollider;
+        if (secondary && !IsOwnCollider(secondary)) return secondary;
+
+        return null;
     }
 
     private bool IsStompCollision(Collision2D collision, Bounds enemyBounds)

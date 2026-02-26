@@ -39,6 +39,7 @@ public class GoombaController : MonoBehaviour, IStompable
     private Animator Animator => animatorComponent ? animatorComponent : animatorComponent = GetComponent<Animator>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
     private EnemyAudio Audio => enemyAudio ? enemyAudio : enemyAudio = GetComponent<EnemyAudio>();
+    public GameObject ScorePopupPrefab => scorePopupPrefab;
 
     private void Awake()
     {
@@ -143,6 +144,8 @@ public class GoombaController : MonoBehaviour, IStompable
         if (!scorePopupPrefab) return;
 
         var worldPosition = transform.position + scorePopupOffset;
-        GameInitializer.ShowScorePopup(scorePopupPrefab, stompScore, worldPosition);
+        var popupObject = PrefabPoolService.Spawn(scorePopupPrefab, worldPosition, Quaternion.identity);
+        if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
+            popup.Show(stompScore, worldPosition);
     }
 }
