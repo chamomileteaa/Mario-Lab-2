@@ -19,6 +19,7 @@ public class BrickCoin : MonoBehaviour
     private float baseGravityScale = -1f;
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
     private Animator Anim => animatorComponent ? animatorComponent : animatorComponent = GetComponent<Animator>();
+    public GameObject ScorePopupPrefab => scorePopupPrefab;
 
     private void OnEnable()
     {
@@ -55,7 +56,9 @@ public class BrickCoin : MonoBehaviour
         if (!scorePopupPrefab) return;
 
         var worldPosition = transform.position + scorePopupOffset;
-        GameInitializer.ShowScorePopup(scorePopupPrefab, scoreValue, worldPosition);
+        var popupObject = PrefabPoolService.Spawn(scorePopupPrefab, worldPosition, Quaternion.identity);
+        if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
+            popup.Show(scoreValue, worldPosition);
     }
 
     private void Launch()

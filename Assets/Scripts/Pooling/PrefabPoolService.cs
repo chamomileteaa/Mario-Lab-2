@@ -6,7 +6,7 @@ public static class PrefabPoolService
     private static readonly Dictionary<int, PrefabPool> poolsByPrefabId = new Dictionary<int, PrefabPool>();
     private static bool autoCreatePools = true;
     private static int autoCreateMaxSize = 128;
-    private static int autoCreatePrewarmCount;
+    private static int autoCreatePrewarmCount = 2;
     private static Transform runtimePoolRoot;
 
     public static bool TryGetPool(GameObject prefab, out PrefabPool pool)
@@ -54,7 +54,7 @@ public static class PrefabPoolService
         Despawn(instance.gameObject);
     }
 
-    public static void ConfigureAutoCreate(bool enabled = true, int defaultMaxSize = 128, int defaultPrewarmCount = 0)
+    public static void ConfigureAutoCreate(bool enabled = true, int defaultMaxSize = 128, int defaultPrewarmCount = 2)
     {
         autoCreatePools = enabled;
         autoCreateMaxSize = Mathf.Max(1, defaultMaxSize);
@@ -84,7 +84,7 @@ public static class PrefabPoolService
         poolsByPrefabId.Clear();
         autoCreatePools = true;
         autoCreateMaxSize = 128;
-        autoCreatePrewarmCount = 0;
+        autoCreatePrewarmCount = 2;
         runtimePoolRoot = null;
     }
 

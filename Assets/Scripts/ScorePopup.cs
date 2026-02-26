@@ -18,7 +18,8 @@ public class ScorePopup : MonoBehaviour
     private RectTransform rectTransform;
     private TextMeshProUGUI textLabel;
     private RectTransform canvasRect;
-    private Camera worldCamera;
+    private Camera sceneCamera;
+    private Camera uiCamera;
     private Color baseColor;
     private Vector2 startAnchoredPosition;
     private Coroutine lifeRoutine;
@@ -103,9 +104,12 @@ public class ScorePopup : MonoBehaviour
         if (Rect.parent != canvasRect)
             Rect.SetParent(canvasRect, false);
 
-        worldCamera = ResolveWorldCamera(rootCanvas);
+        sceneCamera = ResolveSceneCamera();
+        uiCamera = ResolveUiCamera(rootCanvas, sceneCamera);
+
+        if (!sceneCamera) return false;
         if (rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay) return true;
-        return worldCamera;
+        return uiCamera;
     }
 
     private static Canvas ResolveRootCanvas()
@@ -130,20 +134,42 @@ public class ScorePopup : MonoBehaviour
         return cachedRootCanvas;
     }
 
-    private static Camera ResolveWorldCamera(Canvas canvas)
+    private static Camera ResolveSceneCamera()
+    {
+        if (cachedWorldCamera && cachedWorldCamera.isActiveAndEnabled) return cachedWorldCamera;
+
+        if (Camera.main) cachedWorldCamera = Camera.main;
+        if (cachedWorldCamera && cachedWorldCamera.isActiveAndEnabled) return cachedWorldCamera;
+
+        var cameras = Camera.allCameras;
+        for (var i = 0; i < cameras.Length; i++)
+        {
+            var camera = cameras[i];
+            if (!camera || !camera.isActiveAndEnabled) continue;
+            cachedWorldCamera = camera;
+            break;
+        }
+
+        return cachedWorldCamera;
+    }
+
+    private static Camera ResolveUiCamera(Canvas canvas, Camera fallbackCamera)
     {
         if (!canvas || canvas.renderMode == RenderMode.ScreenSpaceOverlay) return null;
         if (canvas.worldCamera) return canvas.worldCamera;
-
-        if (cachedWorldCamera) return cachedWorldCamera;
-        cachedWorldCamera = Camera.main;
-        return cachedWorldCamera;
+        return fallbackCamera;
     }
 
     private bool TryWorldToAnchored(Vector3 worldPosition, out Vector2 anchoredPosition)
     {
-        var screenPoint = RectTransformUtility.WorldToScreenPoint(worldCamera, worldPosition);
-        return RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, worldCamera, out anchoredPosition);
+        if (!sceneCamera)
+        {
+            anchoredPosition = default;
+            return false;
+        }
+
+        var screenPoint = RectTransformUtility.WorldToScreenPoint(sceneCamera, worldPosition);
+        return RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, uiCamera, out anchoredPosition);
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
