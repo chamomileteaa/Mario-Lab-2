@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public class PowerupController : MonoBehaviour
+public class EntityMovement : MonoBehaviour
 {
     public float speed = 1f;
     public Vector2 direction = Vector2.right;
