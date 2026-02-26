@@ -150,6 +150,8 @@ MonoBehaviour:
   hitCooldown: 0.05
   bumpHeight: 0.5
   bumpDuration: 0.12
+  bumpReactionSize: {x: 0.95, y: 0.5}
+  bumpReactionHeight: 0.04
   spriteBaseAlpha: 1
   hasSpriteBaseAlpha: 1
 --- !u!61 &1312598114658279641

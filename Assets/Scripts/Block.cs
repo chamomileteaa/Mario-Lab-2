@@ -1,4 +1,6 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -6,6 +8,8 @@ using UnityEngine.Serialization;
 [RequireComponent(typeof(BoxCollider2D))]
 public class Block : MonoBehaviour
 {
+    public static event Action<BlockBumpContext> Bumped;
+
     public enum BlockKind
     {
         Brick,
@@ -57,6 +61,8 @@ public class Block : MonoBehaviour
     [SerializeField, Min(0f)] private float hitCooldown = 0.05f;
     [SerializeField, Min(0f)] private float bumpHeight = 0.5f;
     [SerializeField, Min(0.01f)] private float bumpDuration = 0.12f;
+    [SerializeField, Min(0.05f)] private Vector2 bumpReactionSize = new Vector2(0.95f, 0.5f);
+    [SerializeField, Min(0f)] private float bumpReactionHeight = 0.04f;
 
     private BoxCollider2D boxCollider2D;
     private float nextHitTime;
@@ -71,6 +77,8 @@ public class Block : MonoBehaviour
     [SerializeField, HideInInspector] private float spriteBaseAlpha = 1f;
     [SerializeField, HideInInspector] private bool hasSpriteBaseAlpha;
     private bool editorPreviewActive;
+    private readonly Collider2D[] bumpHits = new Collider2D[12];
+    private readonly HashSet<int> bumpNotifiedIds = new HashSet<int>();
 
     private BoxCollider2D BoxCollider => boxCollider2D ? boxCollider2D : boxCollider2D = GetComponent<BoxCollider2D>();
     private SpriteRenderer Sprite => spriteRenderer ? spriteRenderer : spriteRenderer = ResolveSpriteRenderer();
@@ -158,6 +166,7 @@ public class Block : MonoBehaviour
 
         if (isHidden) Reveal();
         StartBump();
+        NotifyBumpReactives(mario);
 
         if (TryDispense())
             return;
@@ -312,6 +321,32 @@ public class Block : MonoBehaviour
         bumpRoutine = StartCoroutine(BumpSprite(bumpTarget));
     }
 
+    private void NotifyBumpReactives(MarioController mario)
+    {
+        var bounds = BoxCollider.bounds;
+        var center = new Vector2(bounds.center.x, bounds.max.y + bumpReactionHeight + bumpReactionSize.y * 0.5f);
+        var context = new BlockBumpContext(this, mario, center, Vector2.up);
+
+        if (bumpReactionSize.x > 0f && bumpReactionSize.y > 0f)
+        {
+            bumpNotifiedIds.Clear();
+
+            var filter = new ContactFilter2D();
+            filter.useTriggers = true;
+            var hitCount = Physics2D.OverlapBox(center, bumpReactionSize, 0f, filter, bumpHits);
+            for (var i = 0; i < hitCount; i++)
+            {
+                var hit = bumpHits[i];
+                bumpHits[i] = null;
+                if (!hit) continue;
+                if (IsOwnCollider(hit)) continue;
+                NotifyReactiveBehaviours(hit, context);
+            }
+        }
+
+        Bumped?.Invoke(context);
+    }
+
     private IEnumerator BumpSprite(Transform spriteTransform)
     {
         var elapsed = 0f;
@@ -326,6 +361,28 @@ public class Block : MonoBehaviour
 
         if (spriteTransform) spriteTransform.localPosition = spriteBaseLocalPosition;
         bumpRoutine = null;
+    }
+
+    private void NotifyReactiveBehaviours(Collider2D hit, BlockBumpContext context)
+    {
+        var behaviours = hit.GetComponentsInParent<MonoBehaviour>(true);
+        for (var i = 0; i < behaviours.Length; i++)
+        {
+            var behaviour = behaviours[i];
+            if (!behaviour || behaviour == this) continue;
+            if (behaviour is not IBlockBumpReactive reactive) continue;
+
+            var behaviourId = behaviour.GetInstanceID();
+            if (!bumpNotifiedIds.Add(behaviourId)) continue;
+            reactive.OnBlockBumped(context);
+        }
+    }
+
+    private bool IsOwnCollider(Collider2D collider)
+    {
+        if (!collider) return false;
+        var owner = collider.GetComponentInParent<Block>();
+        return owner && owner == this;
     }
 
     private SpriteRenderer ResolveSpriteRenderer()

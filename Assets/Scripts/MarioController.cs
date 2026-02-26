@@ -42,6 +42,10 @@ public class MarioController : MonoBehaviour
     [SerializeField, Range(0.05f, 1f)] private float invulnerabilityMinAlpha = 0.35f;
     [SerializeField, Min(1f)] private float invulnerabilityFlickerSpeed = 18f;
 
+    [Header("Combat")]
+    [SerializeField, Min(0.1f)] private float stompBounceSpeed = 7.5f;
+    [SerializeField, Min(0f)] private float stompContactMaxGap = 0.3f;
+
     [Header("Collider")]
     [SerializeField, Min(0.01f)] private Vector2 smallColliderSize = new Vector2(1f, 1f);
     [SerializeField] private Vector2 smallColliderOffset = new Vector2(0f, 0.5f);
@@ -148,9 +152,19 @@ public class MarioController : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (!collision.CompareTag("enemy")) return;
-        if (isDead) return;
-        TakeDamage();
+        TryHandleEnemyContact(collision);
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (TryHandleEnemyContact(collision.collider)) return;
+        TryHandleEnemyContact(collision.otherCollider);
+    }
+
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        if (TryHandleEnemyContact(collision.collider)) return;
+        TryHandleEnemyContact(collision.otherCollider);
     }
 
     public void TakeDamage()
@@ -190,6 +204,55 @@ public class MarioController : MonoBehaviour
     }
 
     public void SetSuper(bool value) => isSuper = value;
+
+    private bool TryHandleEnemyContact(Collider2D collider)
+    {
+        if (!collider || !collider.CompareTag("enemy")) return false;
+        if (isDead) return true;
+
+        if (TryStompEnemy(collider)) return true;
+
+        TakeDamage();
+        return true;
+    }
+
+    private bool TryStompEnemy(Collider2D enemyCollider)
+    {
+        if (Body.linearVelocity.y > 0.05f) return false;
+        if (!IsStompContact(enemyCollider.bounds)) return false;
+
+        var stompable = enemyCollider.GetComponentInParent<IStompable>();
+        if (stompable == null) return false;
+        if (!stompable.TryStomp(this, BodyCollider.bounds.center)) return false;
+
+        BounceFromStomp();
+        return true;
+    }
+
+    private bool IsStompContact(Bounds enemyBounds)
+    {
+        var marioBounds = BodyCollider.bounds;
+
+        const float horizontalInset = 0.01f;
+        if (marioBounds.max.x <= enemyBounds.min.x + horizontalInset) return false;
+        if (marioBounds.min.x >= enemyBounds.max.x - horizontalInset) return false;
+
+        var feetGap = marioBounds.min.y - enemyBounds.max.y;
+        if (feetGap < -0.2f) return false;
+        if (feetGap > stompContactMaxGap) return false;
+        if (marioBounds.center.y <= enemyBounds.center.y) return false;
+
+        return true;
+    }
+
+    private void BounceFromStomp()
+    {
+        var velocity = Body.linearVelocity;
+        velocity.y = Mathf.Max(stompBounceSpeed, velocity.y);
+        Body.linearVelocity = velocity;
+        coyoteTimer = 0f;
+        jumpBufferTimer = 0f;
+    }
 
     private void ReadInput()
     {
