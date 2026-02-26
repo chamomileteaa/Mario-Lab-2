@@ -8,7 +8,7 @@ using UnityEngine;
 public class ScorePopup : MonoBehaviour
 {
     [SerializeField, Min(0)] private int score = 200;
-    [SerializeField, Min(0f)] private float riseDistance = 48f;
+    [SerializeField, Min(1f)] private float riseSpeed = 150f;
     [SerializeField, Min(0.01f)] private float lifetime = 0.6f;
     [SerializeField, Range(0f, 1f)] private float fadeStartNormalized = 0.45f;
 
@@ -76,7 +76,7 @@ public class ScorePopup : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             var t = Mathf.Clamp01(elapsed / lifetime);
-            Rect.anchoredPosition = startAnchoredPosition + Vector2.up * Mathf.SmoothStep(0f, riseDistance, t);
+            Rect.anchoredPosition = startAnchoredPosition + Vector2.up * (riseSpeed * elapsed);
 
             if (t >= fadeStartNormalized)
             {
