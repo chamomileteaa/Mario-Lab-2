@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -19,17 +20,20 @@ public class SpriteShardParticles : MonoBehaviour
         var textureSheet = Particles.textureSheetAnimation;
         textureSheet.enabled = true;
         textureSheet.mode = ParticleSystemAnimationMode.Sprites;
+        textureSheet.frameOverTime = new ParticleSystem.MinMaxCurve(0f);
+        textureSheet.startFrame = new ParticleSystem.MinMaxCurve(0f, 1f);
         ClearSprites(textureSheet);
 
         var shards = GetOrCreateShards(sprite);
         if (shards.Length == 0)
         {
             textureSheet.AddSprite(sprite);
-            return;
         }
-
-        foreach (var shard in shards)
-            textureSheet.AddSprite(shard);
+        else
+        {
+            foreach (var shard in shards)
+                textureSheet.AddSprite(shard);
+        }
 
         // Restart with the latest shard set so pooled effects render the correct source immediately.
         Particles.Clear(true);
@@ -83,7 +87,7 @@ public class SpriteShardParticles : MonoBehaviour
                     new Vector2(0.5f, 0.5f),
                     sourceSprite.pixelsPerUnit,
                     0,
-                    SpriteMeshType.Tight);
+                    SpriteMeshType.FullRect);
 
                 result.Add(shard);
             }
@@ -108,7 +112,7 @@ public class SpriteShardParticles : MonoBehaviour
 
             return true;
         }
-        catch (UnityException)
+        catch (Exception)
         {
             // Non-readable textures cannot be scanned; keep the shard.
             return false;
