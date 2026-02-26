@@ -89,7 +89,7 @@ public class ScorePopup : MonoBehaviour
         if (!canvas)
             canvas = GetComponentInParent<Canvas>();
         if (!canvas)
-            canvas = FindObjectOfType<Canvas>();
+            canvas = FindFirstObjectByType<Canvas>();
 
         if (!canvas) return false;
         canvasRect = canvas.transform as RectTransform;

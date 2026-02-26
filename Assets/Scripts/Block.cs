@@ -87,27 +87,57 @@ public class Block : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        var body = collision.rigidbody;
-        if (!body) return;
+        if (TryHitFromCollider(collision.collider, false)) return;
+        TryHitFromCollider(collision.otherCollider, false);
+    }
 
-        var mario = body.GetComponent<MarioController>();
-        if (!mario) return;
-        if (!CanHitFromBelow(body, collision)) return;
-
-        Hit(mario);
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        if (TryHitFromCollider(collision.collider, false)) return;
+        TryHitFromCollider(collision.otherCollider, false);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!startsHidden || !isHidden) return;
-        if (!other.attachedRigidbody) return;
+        if (!isHidden) return;
+        TryHitFromCollider(other, true);
+    }
 
-        var mario = other.attachedRigidbody.GetComponent<MarioController>();
-        if (!mario) return;
-        if (!IsMovingUp(other.attachedRigidbody)) return;
-        if (other.attachedRigidbody.position.y >= transform.position.y - 0.05f) return;
+    private bool TryHitFromCollider(Collider2D collider, bool requireUpward)
+    {
+        if (!collider) return false;
+
+        var mario = collider.GetComponentInParent<MarioController>();
+        if (!mario || !mario.CompareTag("Player")) return false;
+
+        var body = collider.attachedRigidbody ? collider.attachedRigidbody : mario.GetComponent<Rigidbody2D>();
+        if (!body) return false;
+        if (!CanHeadbuttFromBelow(body, collider.bounds, requireUpward)) return false;
 
         Hit(mario);
+        return true;
+    }
+
+    private bool CanHeadbuttFromBelow(Rigidbody2D body, Bounds marioBounds, bool requireUpward)
+    {
+        if (!body) return false;
+
+        var blockBounds = BoxCollider.bounds;
+        var verticalSpeed = body.linearVelocity.y;
+        if (requireUpward && verticalSpeed <= 0.01f) return false;
+
+        const float sideInset = 0.02f;
+        if (marioBounds.center.x <= blockBounds.min.x + sideInset) return false;
+        if (marioBounds.center.x >= blockBounds.max.x - sideInset) return false;
+
+        const float minHeadGap = -0.3f;
+        const float maxHeadGap = 0.3f;
+        var headGap = blockBounds.min.y - marioBounds.max.y;
+        if (headGap < minHeadGap) return false;
+        if (headGap > maxHeadGap) return false;
+
+        if (verticalSpeed > 0.01f) return true;
+        return !requireUpward && marioBounds.max.y >= blockBounds.min.y - 0.04f;
     }
 
     private void Hit(MarioController mario)
@@ -277,25 +307,6 @@ public class Block : MonoBehaviour
         var color = sprite.color;
         color.a = alpha;
         sprite.color = color;
-    }
-
-    private static bool IsMovingUp(Rigidbody2D body) => body && body.linearVelocity.y > 0f;
-
-    private bool CanHitFromBelow(Rigidbody2D body, Collision2D collision)
-    {
-        if (!body || collision == null) return false;
-        if (body.linearVelocity.y <= 0.01f && collision.relativeVelocity.y <= 0.01f) return false;
-        if (HasBottomContact(collision)) return true;
-        return body.position.y < transform.position.y - 0.05f;
-    }
-
-    private static bool HasBottomContact(Collision2D collision)
-    {
-        for (var i = 0; i < collision.contactCount; i++)
-            if (collision.GetContact(i).normal.y < -0.2f)
-                return true;
-
-        return false;
     }
 
     private void Spawn(ContentStep step)

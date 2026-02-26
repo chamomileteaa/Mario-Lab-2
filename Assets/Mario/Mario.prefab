@@ -108,7 +108,7 @@ GameObject:
   - component: {fileID: 4062206536093233284}
   m_Layer: 0
   m_Name: Mario
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -150,12 +150,19 @@ MonoBehaviour:
   acceleration: 30
   deceleration: 10
   airControlMultiplier: 0.85
-  maxJumpHeight: 4
-  minJumpHeight: 2.4
+  jumpHeight:
+    min: 2.4
+    max: 4
   timeToApex: 0.44
   jumpReleaseGravityMultiplier: 1.4
   coyoteTime: 0.08
   jumpBufferTime: 0.1
+  initialForm: 0
+  damageInvulnerabilityTime: 1
+  smallColliderSize: {x: 1, y: 1}
+  smallColliderOffset: {x: 0, y: 0.5}
+  bigColliderSize: {x: 1, y: 2}
+  bigColliderOffset: {x: 0, y: 1}
   groundCheck: {fileID: 7768019335697351842}
   groundCheckSize: {x: 1, y: 0.12}
   groundLayer:
