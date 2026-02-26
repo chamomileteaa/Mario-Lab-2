@@ -25595,7 +25595,7 @@ TilemapCollider2D:
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
   m_MaximumTileChangeCount: 1000
-  m_ExtrusionFactor: 0
+  m_ExtrusionFactor: 0.01
   m_UseDelaunayMesh: 0
 --- !u!1 &1860822633414282470
 GameObject:
@@ -26186,7 +26186,7 @@ TilemapCollider2D:
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
   m_MaximumTileChangeCount: 1000
-  m_ExtrusionFactor: 0
+  m_ExtrusionFactor: 0.01
   m_UseDelaunayMesh: 0
 --- !u!1 &4191700767919496431
 GameObject:
@@ -31688,7 +31688,7 @@ TilemapCollider2D:
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
   m_MaximumTileChangeCount: 1000
-  m_ExtrusionFactor: 0
+  m_ExtrusionFactor: 0.01
   m_UseDelaunayMesh: 0
 --- !u!1 &8736945715994852520
 GameObject:

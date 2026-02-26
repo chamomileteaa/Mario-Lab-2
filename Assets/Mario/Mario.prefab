@@ -164,7 +164,7 @@ MonoBehaviour:
   bigColliderSize: {x: 0.8, y: 1.9375}
   bigColliderOffset: {x: 0, y: 1.0325}
   groundCheck: {fileID: 7768019335697351842}
-  groundCheckSize: {x: 0.8, y: 0.126}
+  groundCheckSize: {x: 0.79, y: 0.126}
   groundLayer:
     serializedVersion: 2
     m_Bits: 64

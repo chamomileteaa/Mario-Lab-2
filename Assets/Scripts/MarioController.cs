@@ -49,7 +49,7 @@ public class MarioController : MonoBehaviour
     [Header("Ground Check")]
     [SerializeField] private Transform groundCheck;
     [SerializeField] private Vector2 groundCheckSize = new Vector2(0.6f, 0.12f);
-    [SerializeField] private LayerMask groundLayer;
+    [SerializeField, Range(0f, 1f)] private float groundNormalMinY = 0.55f;
 
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
@@ -70,6 +70,7 @@ public class MarioController : MonoBehaviour
     private MarioForm form;
     private MarioForm pendingGrowForm;
     private readonly Collider2D[] groundHits = new Collider2D[4];
+    private readonly ContactPoint2D[] groundContacts = new ContactPoint2D[8];
     private readonly Collider2D[] resizeHits = new Collider2D[4];
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
@@ -245,13 +246,21 @@ public class MarioController : MonoBehaviour
 
     private bool CheckGrounded()
     {
+        var contactCount = Body.GetContacts(groundContacts);
+        for (var i = 0; i < contactCount; i++)
+        {
+            var contact = groundContacts[i];
+            if (!contact.collider || contact.collider.isTrigger) continue;
+            if (contact.normal.y >= groundNormalMinY) return true;
+        }
+
         if (groundCheckSize.x <= 0f || groundCheckSize.y <= 0f) return false;
 
         var probeCenter = GroundCheck ? (Vector2)GroundCheck.position : (Vector2)transform.position;
-        var filter = new ContactFilter2D { useLayerMask = true, layerMask = groundLayer, useTriggers = false };
+        var filter = new ContactFilter2D { useTriggers = false };
         var hitCount = Physics2D.OverlapBox(probeCenter, groundCheckSize, 0f, filter, groundHits);
         for (var i = 0; i < hitCount; i++)
-            if (groundHits[i] && !groundHits[i].isTrigger)
+            if (groundHits[i] && !groundHits[i].isTrigger && !IsOwnCollider(groundHits[i]))
                 return true;
 
         return false;
@@ -281,9 +290,9 @@ public class MarioController : MonoBehaviour
     private void UpdateSpriteDirection()
     {
         if (!Flipper) return;
-
-        var vertical = Mathf.Abs(moveInput.y) > InputDeadzone ? moveInput.y : Body.linearVelocity.y;
-        Flipper.SetDirection(new Vector2(moveInput.x, vertical));
+        if (!isGrounded) return;
+        if (Mathf.Abs(moveInput.x) <= InputDeadzone) return;
+        Flipper.SetDirection(new Vector2(moveInput.x, 0f));
     }
 
     private void ResolveDeath()
@@ -340,11 +349,11 @@ public class MarioController : MonoBehaviour
 
     private bool TryApplyBigCollider()
     {
-        var filter = new ContactFilter2D { useLayerMask = true, layerMask = groundLayer, useTriggers = false };
+        var filter = new ContactFilter2D { useTriggers = false };
         var center = (Vector2)transform.position + bigColliderOffset;
         var hitCount = Physics2D.OverlapBox(center, bigColliderSize, 0f, filter, resizeHits);
         for (var i = 0; i < hitCount; i++)
-            if (resizeHits[i] && resizeHits[i] != BodyCollider && !resizeHits[i].isTrigger)
+            if (resizeHits[i] && !resizeHits[i].isTrigger && !IsOwnCollider(resizeHits[i]))
                 return false;
 
         SetBodyCollider(bigColliderSize, bigColliderOffset);
@@ -367,5 +376,12 @@ public class MarioController : MonoBehaviour
         if (Mathf.Abs(inputX) <= InputDeadzone) return false;
         if (Mathf.Abs(velocityX) <= InputDeadzone) return false;
         return Mathf.Sign(inputX) != Mathf.Sign(velocityX);
+    }
+
+    private bool IsOwnCollider(Collider2D collider)
+    {
+        if (!collider) return false;
+        if (collider == BodyCollider) return true;
+        return collider.attachedRigidbody && collider.attachedRigidbody == Body;
     }
 }
