@@ -31,6 +31,7 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
     [SerializeField] private TurnMatrix turnRules = TurnMatrix.Walls | TurnMatrix.Entities;
     [SerializeField, Min(0f)] private float turnCooldown = 0.1f;
     [SerializeField, Min(0.01f)] private float wallCheckDistance = 0.06f;
+    [SerializeField] private bool useContinuousCollisionDetection = true;
 
     [Header("Block Bump")]
     [SerializeField] private BlockBumpReaction blockBumpReaction = BlockBumpReaction.Bounce;
@@ -39,15 +40,21 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
     [SerializeField, Min(0f)] private float knockAwayGravityScale = 1f;
 
     private Rigidbody2D body2D;
+    private Collider2D mainCollider2D;
+    private Collider2D[] ownColliders;
     private SpriteFlipper spriteFlipper;
     private bool movementEnabled;
     private bool startedMovement;
     private bool knockedAway;
     private float nextTurnTime;
     private float initialGravityScale;
+    private readonly RaycastHit2D[] aheadHits = new RaycastHit2D[8];
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
-    private Collider2D MainCollider => GetComponent<Collider2D>();
+    private Collider2D MainCollider => mainCollider2D ? mainCollider2D : mainCollider2D = GetComponent<Collider2D>();
+    private Collider2D[] OwnColliders => ownColliders != null && ownColliders.Length > 0
+        ? ownColliders
+        : ownColliders = GetComponentsInChildren<Collider2D>(true);
     private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponent<SpriteFlipper>();
 
     public event Action<EntityController> KnockedAway;
@@ -74,6 +81,9 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
         knockedAway = false;
         nextTurnTime = 0f;
         Body.gravityScale = initialGravityScale;
+        Body.collisionDetectionMode = useContinuousCollisionDetection
+            ? CollisionDetectionMode2D.Continuous
+            : CollisionDetectionMode2D.Discrete;
         SetCollidersEnabled(true);
         Body.WakeUp();
         UpdateFacing(1f);
@@ -95,7 +105,7 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
         if (knockedAway) return;
         if (Time.time < nextTurnTime) return;
 
-        if ((turnRules & TurnMatrix.Walls) != 0 && HasWallAhead())
+        if (ShouldTurnFromAheadProbe())
             ReverseDirection();
     }
 
@@ -104,15 +114,8 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
         if ((turnRules & TurnMatrix.Entities) == 0 || knockedAway) return;
         if (Time.time < nextTurnTime) return;
 
-        var other = collision.collider ? collision.collider.GetComponentInParent<EntityController>() : null;
-        if (other && other != this)
-        {
-            ReverseDirection();
-            return;
-        }
-
-        other = collision.otherCollider ? collision.otherCollider.GetComponentInParent<EntityController>() : null;
-        if (other && other != this)
+        var other = ResolveOtherEntity(collision);
+        if (other)
             ReverseDirection();
     }
 
@@ -186,15 +189,70 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
         Body.linearVelocity = velocity;
     }
 
-    private bool HasWallAhead()
+    private bool ShouldTurnFromAheadProbe()
     {
         if (!MainCollider) return false;
+        if ((turnRules & (TurnMatrix.Walls | TurnMatrix.Entities)) == 0) return false;
 
-        var bounds = MainCollider.bounds;
-        var origin = new Vector2(bounds.center.x + moveDirectionX * (bounds.extents.x + 0.01f), bounds.center.y);
-        var hit = Physics2D.Raycast(origin, new Vector2(moveDirectionX, 0f), wallCheckDistance);
-        if (!hit.collider || hit.collider.isTrigger) return false;
-        return hit.rigidbody != Body;
+        var probeDistance = wallCheckDistance + Mathf.Abs(Body.linearVelocity.x) * Time.fixedDeltaTime;
+        if (probeDistance <= 0f) return false;
+
+        var filter = new ContactFilter2D { useTriggers = false };
+        var hitCount = MainCollider.Cast(new Vector2(moveDirectionX, 0f), filter, aheadHits, probeDistance);
+        for (var i = 0; i < hitCount; i++)
+        {
+            var hitCollider = aheadHits[i].collider;
+            if (!hitCollider || IsOwnCollider(hitCollider)) continue;
+
+            var otherEntity = ResolveEntityFromCollider(hitCollider);
+            if (otherEntity && otherEntity != this)
+            {
+                if ((turnRules & TurnMatrix.Entities) != 0) return true;
+                continue;
+            }
+
+            if ((turnRules & TurnMatrix.Walls) != 0)
+                return true;
+        }
+
+        return false;
+    }
+
+    private EntityController ResolveOtherEntity(Collision2D collision)
+    {
+        if (TryResolveEntityFromRigidbody(collision.rigidbody, out var other))
+            return other;
+        if (collision.collider && TryResolveEntityFromRigidbody(collision.collider.attachedRigidbody, out other))
+            return other;
+        if (collision.otherCollider && TryResolveEntityFromRigidbody(collision.otherCollider.attachedRigidbody, out other))
+            return other;
+
+        return null;
+    }
+
+    private EntityController ResolveEntityFromCollider(Collider2D collider)
+    {
+        if (!collider) return null;
+        if (TryResolveEntityFromRigidbody(collider.attachedRigidbody, out var other))
+            return other;
+        return null;
+    }
+
+    private bool TryResolveEntityFromRigidbody(Rigidbody2D rigidbody, out EntityController other)
+    {
+        other = null;
+        if (!rigidbody || rigidbody == Body) return false;
+        if (!rigidbody.TryGetComponent(out other)) return false;
+        return other && other != this;
+    }
+
+    private bool IsOwnCollider(Collider2D collider)
+    {
+        if (!collider) return false;
+        foreach (var localCollider in OwnColliders)
+            if (localCollider == collider)
+                return true;
+        return false;
     }
 
     private void UpdateFacing(float directionY)
@@ -240,7 +298,7 @@ public class EntityController : MonoBehaviour, IBlockBumpReactive
 
     private void SetCollidersEnabled(bool enabled)
     {
-        var localColliders = GetComponentsInChildren<Collider2D>(true);
+        var localColliders = OwnColliders;
         for (var i = 0; i < localColliders.Length; i++)
         {
             var collider = localColliders[i];

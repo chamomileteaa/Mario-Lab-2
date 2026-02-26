@@ -20,6 +20,8 @@ public class MarioController : MonoBehaviour
     private const float CrouchThreshold = -0.5f;
     private const float MinAnimMoveSpeed = 0.2f;
     private const float MinDeathBounceSpeed = 11f;
+    private const PauseType MarioPauseBypassTypes = PauseType.Physics | PauseType.Animation;
+    private const PauseType GameplayPauseTypes = PauseType.Physics | PauseType.Animation | PauseType.Input;
 
     [Header("Input")]
     [SerializeField] private InputActionReference moveAction;
@@ -45,9 +47,10 @@ public class MarioController : MonoBehaviour
     [SerializeField, Min(1f)] private float invulnerabilityFlickerSpeed = 18f;
 
     [Header("Combat")]
-    [SerializeField, Min(0.1f)] private float stompBounceSpeed = 7.5f;
+    [SerializeField, Min(0.1f)] private float stompBounceSpeed = 12f;
     [SerializeField, MinMaxInt(-1f, 1f)] private MinMaxFloat stompContactGap = new MinMaxFloat(-0.55f, 0.3f);
     [SerializeField, Min(0f)] private float stompContactPointTolerance = 0.08f;
+    [SerializeField, Min(0f)] private float stompSideTolerance = 0.18f;
     [SerializeField, Min(0f)] private float stompMaxUpwardVelocity = 0.75f;
 
     [Header("Collider")]
@@ -128,7 +131,7 @@ public class MarioController : MonoBehaviour
         UpdateJumpPhysics();
         Body.simulated = true;
         BodyCollider.enabled = true;
-        PauseService.SetSimulationPauseBypass(this, false);
+        PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, false);
         moveAction.SetEnabled(true);
         jumpAction.SetEnabled(true);
     }
@@ -137,7 +140,7 @@ public class MarioController : MonoBehaviour
     {
         if (deathPauseActive)
         {
-            PauseService.Resume(PauseType.Simulation | PauseType.Input);
+            PauseService.Resume(GameplayPauseTypes);
             deathPauseActive = false;
         }
 
@@ -148,7 +151,7 @@ public class MarioController : MonoBehaviour
         }
 
         SetSpriteOpacity(1f);
-        PauseService.SetSimulationPauseBypass(this, false);
+        PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, false);
         jumpAction.SetEnabled(false);
         moveAction.SetEnabled(false);
     }
@@ -190,16 +193,20 @@ public class MarioController : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (!collision) return;
-        if (isDead) return;
-
-        var stompable = collision.GetComponentInParent<IStompable>();
-        if (stompable != null) return;
-        if (!IsEnemyCollider(collision)) return;
-        TakeDamage();
+        HandleEnemyTrigger(collision);
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
+    {
+        HandleEnemyCollision(collision);
+    }
+
+    private void OnTriggerStay2D(Collider2D collision)
+    {
+        HandleEnemyTrigger(collision);
+    }
+
+    private void OnCollisionStay2D(Collision2D collision)
     {
         HandleEnemyCollision(collision);
     }
@@ -274,13 +281,13 @@ public class MarioController : MonoBehaviour
     {
         var marioBounds = BodyCollider.bounds;
         var horizontalOverlap = Mathf.Min(marioBounds.max.x, enemyBounds.max.x) - Mathf.Max(marioBounds.min.x, enemyBounds.min.x);
-        if (horizontalOverlap < 0.05f) return false;
+        if (horizontalOverlap < -stompSideTolerance) return false;
 
         var feetGap = marioBounds.min.y - enemyBounds.max.y;
         if (feetGap < stompContactGap.min) return false;
         if (feetGap > stompContactGap.max) return false;
 
-        if (marioBounds.center.y <= enemyBounds.center.y + 0.02f) return false;
+        if (marioBounds.min.y <= enemyBounds.min.y) return false;
 
         return true;
     }
@@ -292,6 +299,15 @@ public class MarioController : MonoBehaviour
         if (!enemyCollider) return;
         var isStompContact = IsStompCollision(collision, enemyCollider.bounds);
         TryHandleEnemyContact(enemyCollider, isStompContact);
+    }
+
+    private void HandleEnemyTrigger(Collider2D collision)
+    {
+        if (!collision || isDead) return;
+        if (IsOwnCollider(collision)) return;
+
+        var isStompContact = Body.linearVelocity.y <= stompMaxUpwardVelocity && IsStompContact(collision.bounds);
+        TryHandleEnemyContact(collision, isStompContact);
     }
 
     private Collider2D ResolveEnemyCollider(Collision2D collision)
@@ -315,13 +331,16 @@ public class MarioController : MonoBehaviour
 
     private bool HasFeetContact(Collision2D collision, Bounds enemyBounds)
     {
-        var marioFeetY = BodyCollider.bounds.min.y + stompContactPointTolerance;
-        var enemyCenterY = enemyBounds.center.y;
+        var marioBounds = BodyCollider.bounds;
+        var marioFeetY = marioBounds.min.y + stompContactPointTolerance;
+        var minContactX = enemyBounds.min.x - stompSideTolerance;
+        var maxContactX = enemyBounds.max.x + stompSideTolerance;
+        var minContactY = enemyBounds.center.y - stompContactPointTolerance;
         var count = collision.contactCount;
         for (var i = 0; i < count; i++)
         {
             var point = collision.GetContact(i).point;
-            if (point.y <= marioFeetY && point.y >= enemyCenterY)
+            if (point.y <= marioFeetY && point.y >= minContactY && point.x >= minContactX && point.x <= maxContactX)
                 return true;
         }
 
@@ -457,7 +476,7 @@ public class MarioController : MonoBehaviour
         pendingGrow = false;
         SetSpriteOpacity(1f);
         Anim.TrySetTrigger("die");
-        PauseService.SetSimulationPauseBypass(this, true);
+        PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, true);
 
         moveInput = Vector2.zero;
         jumpHeld = false;
@@ -536,9 +555,7 @@ public class MarioController : MonoBehaviour
 
     private bool IsOwnCollider(Collider2D collider)
     {
-        if (!collider) return false;
-        if (collider == BodyCollider) return true;
-        return collider.attachedRigidbody && collider.attachedRigidbody == Body;
+        return collider && collider == BodyCollider;
     }
 
     private static bool IsEnemyCollider(Collider2D collider)
@@ -593,7 +610,7 @@ public class MarioController : MonoBehaviour
         Body.simulated = false;
         SceneCameraController?.SetAxisLocks(false, true, true);
 
-        PauseService.Pause(PauseType.Simulation | PauseType.Input);
+        PauseService.Pause(GameplayPauseTypes);
         deathPauseActive = true;
         yield return new WaitForSecondsRealtime(deathPauseDuration);
 
@@ -614,10 +631,10 @@ public class MarioController : MonoBehaviour
             yield return null;
         }
 
-        PauseService.SetSimulationPauseBypass(this, false);
+        PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, false);
         if (deathPauseActive)
         {
-            PauseService.Resume(PauseType.Simulation | PauseType.Input);
+            PauseService.Resume(GameplayPauseTypes);
             deathPauseActive = false;
         }
 
