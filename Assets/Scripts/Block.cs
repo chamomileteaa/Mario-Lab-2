@@ -41,12 +41,9 @@ public class Block : MonoBehaviour
     [SerializeField] private bool hiddenNonSolidUntilReveal = true;
 
     [Header("Visuals")]
-    [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private Sprite usedSprite;
-    [SerializeField] private AnimatorCache animatorCache;
 
     [Header("Spawns")]
-    [SerializeField] private Transform spawnPoint;
     [SerializeField] private GameObject breakPrefab;
 
     [Header("Motion")]
@@ -64,15 +61,16 @@ public class Block : MonoBehaviour
 
     private int currentStep;
     private int remainingInStep;
+    private SpriteRenderer spriteRenderer;
+    private AnimatorCache animatorCache;
 
     private BoxCollider2D BoxCollider => boxCollider2D ? boxCollider2D : boxCollider2D = GetComponent<BoxCollider2D>();
+    private SpriteRenderer Sprite => spriteRenderer ? spriteRenderer : spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
-    private Vector3 SpawnPosition => spawnPoint ? spawnPoint.position : transform.position + Vector3.up * 0.6f;
+    private Vector3 SpawnPosition => BoxCollider.bounds.center;
 
     private void Awake()
     {
-        if (!spriteRenderer) spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
-
         startLocalPosition = transform.localPosition;
         initialTriggerState = BoxCollider.isTrigger;
 
@@ -174,7 +172,7 @@ public class Block : MonoBehaviour
         currentStep = contentSteps != null ? contentSteps.Length : 0;
         remainingInStep = 0;
 
-        if (usedSprite && spriteRenderer) spriteRenderer.sprite = usedSprite;
+        if (usedSprite && Sprite) Sprite.sprite = usedSprite;
         TryTrigger("used");
         SyncAnimatorState();
     }
@@ -215,7 +213,7 @@ public class Block : MonoBehaviour
 
     private void ApplyHidden(bool hidden)
     {
-        if (spriteRenderer) spriteRenderer.enabled = !hidden;
+        if (Sprite) Sprite.enabled = !hidden;
         if (hiddenNonSolidUntilReveal) BoxCollider.isTrigger = hidden ? true : initialTriggerState;
         SyncAnimatorState();
     }
