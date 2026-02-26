@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: -8952507316210220194}
   - component: {fileID: 3126108587420262868}
   - component: {fileID: 7463100613222488340}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: 1upmushroom
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -180,11 +180,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f2dcb7e5c3403c04d962391315746c32, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PowerupController
-  groundCheck: {fileID: 0}
-  groundCheckSize: {x: 0.6, y: 0.12}
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 0
+  speed: 3
+  direction: {x: 1, y: 0}
 --- !u!58 &7463100613222488340
 CircleCollider2D:
   m_ObjectHideFlags: 0

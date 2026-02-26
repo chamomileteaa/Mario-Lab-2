@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 916519357198779453}
   - component: {fileID: 2270571426584573729}
   - component: {fileID: 223801643824629594}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: invincibility star
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -203,11 +203,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f2dcb7e5c3403c04d962391315746c32, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PowerupController
-  groundCheck: {fileID: 0}
-  groundCheckSize: {x: 0.6, y: 0.12}
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 0
+  speed: 3
+  direction: {x: 1, y: 0}
 --- !u!58 &223801643824629594
 CircleCollider2D:
   m_ObjectHideFlags: 0
