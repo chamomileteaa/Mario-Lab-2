@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using UnityEngine;
 
@@ -20,18 +19,19 @@ public class Block : MonoBehaviour
         Always
     }
 
-    [Serializable]
-    private struct ContentStep
+    public enum BlockContent
     {
-        [Min(1)] public int count;
-        public GameObject prefab;
+        None,
+        Single,
+        Multi
     }
 
     [Header("Type")]
     [SerializeField] private BlockKind kind = BlockKind.Brick;
     [SerializeField] private BreakRule breakRule = BreakRule.BigOnly;
-
-    [SerializeField] private ContentStep[] contentSteps;
+    [SerializeField] private BlockContent contentType = BlockContent.None;
+    [SerializeField] private GameObject contentPrefab;
+    [SerializeField, ConditionalField(nameof(contentType), (int)BlockContent.Multi), Min(0.1f)] private float multiDuration = 5f;
     [SerializeField] private bool becomeUsedWhenDepleted = true;
 
     [Header("State")]
@@ -53,8 +53,7 @@ public class Block : MonoBehaviour
     private bool isHidden;
     private bool initialTriggerState;
 
-    private int currentStep;
-    private int remainingInStep;
+    private float multiEndTime = -1f;
     private SpriteRenderer spriteRenderer;
     private Coroutine bumpRoutine;
     private Vector3 spriteBaseLocalPosition;
@@ -71,8 +70,7 @@ public class Block : MonoBehaviour
     {
         initialTriggerState = BoxCollider.isTrigger;
         CacheSpriteBaseAlpha();
-
-        ResetContentProgress();
+        ResetContentState();
 
         isHidden = startsHidden;
         RefreshVisualState();
@@ -83,6 +81,11 @@ public class Block : MonoBehaviour
         if (Application.isPlaying) return;
         CacheSpriteBaseAlpha();
         RefreshVisualState();
+    }
+
+    private void Update()
+    {
+        ExpireMultiContentIfNeeded();
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -171,19 +174,48 @@ public class Block : MonoBehaviour
 
     private bool TryDispense()
     {
-        if (!HasContentLeft) return false;
-        Spawn(contentSteps[currentStep]);
+        ExpireMultiContentIfNeeded();
+        if (!contentPrefab) return false;
 
-        remainingInStep--;
-        if (remainingInStep > 0) return true;
+        switch (contentType)
+        {
+            case BlockContent.Single:
+                SpawnContent();
+                DepleteContent();
+                return true;
 
-        currentStep++;
-        AdvanceToNextStep();
+            case BlockContent.Multi:
+                if (multiEndTime < 0f)
+                    multiEndTime = Time.time + multiDuration;
+                if (Time.time >= multiEndTime)
+                {
+                    DepleteContent();
+                    return false;
+                }
 
-        return true;
+                SpawnContent();
+                return true;
+
+            default:
+                return false;
+        }
     }
 
-    private bool HasContentLeft => contentSteps != null && currentStep < contentSteps.Length && remainingInStep > 0;
+    private bool HasContentLeft
+    {
+        get
+        {
+            ExpireMultiContentIfNeeded();
+            if (!contentPrefab) return false;
+
+                return contentType switch
+                {
+                    BlockContent.Single => true,
+                    BlockContent.Multi => multiEndTime < 0f || Time.time <= multiEndTime,
+                    _ => false
+                };
+        }
+    }
 
     private bool CanBreak(MarioController mario)
     {
@@ -201,8 +233,8 @@ public class Block : MonoBehaviour
 
         isUsed = true;
         kind = BlockKind.Solid;
-        currentStep = contentSteps != null ? contentSteps.Length : 0;
-        remainingInStep = 0;
+        contentType = BlockContent.None;
+        multiEndTime = -1f;
 
         RefreshVisualState();
     }
@@ -309,34 +341,30 @@ public class Block : MonoBehaviour
         sprite.color = color;
     }
 
-    private void Spawn(ContentStep step)
+    private void SpawnContent()
     {
-        if (!step.prefab) return;
-        PrefabPoolService.Spawn(step.prefab, SpawnPosition, Quaternion.identity);
+        PrefabPoolService.Spawn(contentPrefab, SpawnPosition, Quaternion.identity);
     }
 
-    private void ResetContentProgress()
+    private void ResetContentState()
     {
-        currentStep = 0;
-        remainingInStep = 0;
-        AdvanceToNextStep();
+        multiEndTime = -1f;
     }
 
-    private void AdvanceToNextStep()
+    private void ExpireMultiContentIfNeeded()
     {
-        if (contentSteps == null)
-        {
-            remainingInStep = 0;
-            return;
-        }
+        if (contentType != BlockContent.Multi) return;
+        if (multiEndTime < 0f) return;
+        if (Time.time < multiEndTime) return;
 
-        while (currentStep < contentSteps.Length)
-        {
-            remainingInStep = Mathf.Max(0, contentSteps[currentStep].count);
-            if (remainingInStep > 0) return;
-            currentStep++;
-        }
+        DepleteContent();
+    }
 
-        remainingInStep = 0;
+    private void DepleteContent()
+    {
+        contentType = BlockContent.None;
+        multiEndTime = -1f;
+        if (!becomeUsedWhenDepleted) return;
+        SetUsed();
     }
 }

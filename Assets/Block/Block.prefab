@@ -139,9 +139,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Block
   kind: 0
   breakRule: 1
-  contentSteps:
-  - count: 1
-    prefab: {fileID: 2671069506340941707, guid: cfc5b97f7bbba3f4fa938fe56e1320f0, type: 3}
+  contentType: 1
+  contentPrefab: {fileID: 2671069506340941707, guid: cfc5b97f7bbba3f4fa938fe56e1320f0, type: 3}
+  multiDuration: 5
   becomeUsedWhenDepleted: 1
   startsHidden: 0
   hiddenEditorOpacity: 0.35

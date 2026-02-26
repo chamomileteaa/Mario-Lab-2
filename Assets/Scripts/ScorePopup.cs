@@ -16,22 +16,13 @@ public class ScorePopup : MonoBehaviour
     private TextMeshProUGUI textLabel;
     private Canvas canvas;
     private RectTransform canvasRect;
-    private Vector3 startWorldPosition;
+    private Vector2 startAnchoredPosition;
     private Color baseColor;
     private bool hasBaseColor;
     private Coroutine lifeRoutine;
 
     private RectTransform Rect => rectTransform ? rectTransform : rectTransform = GetComponent<RectTransform>();
     private TextMeshProUGUI Label => textLabel ? textLabel : textLabel = GetComponent<TextMeshProUGUI>();
-
-    private void OnEnable()
-    {
-        startWorldPosition = transform.position;
-        CacheBaseColor();
-        Label.color = baseColor;
-        Label.text = score.ToString();
-        StartLife();
-    }
 
     private void OnDisable()
     {
@@ -47,8 +38,22 @@ public class ScorePopup : MonoBehaviour
 
     public void Show(int value, Vector3 worldPosition)
     {
+        if (!ResolveCanvas())
+        {
+            PrefabPoolService.Despawn(gameObject);
+            return;
+        }
+
         SetScore(value);
-        startWorldPosition = worldPosition;
+        CacheBaseColor();
+        Label.color = baseColor;
+
+        if (!TryWorldToAnchored(worldPosition, out startAnchoredPosition))
+        {
+            PrefabPoolService.Despawn(gameObject);
+            return;
+        }
+        Rect.anchoredPosition = startAnchoredPosition;
         StartLife();
     }
 
@@ -67,7 +72,7 @@ public class ScorePopup : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             var t = Mathf.Clamp01(elapsed / lifetime);
-            SetCanvasPosition(startWorldPosition, Mathf.SmoothStep(0f, riseDistance, t));
+            Rect.anchoredPosition = startAnchoredPosition + Vector2.up * Mathf.SmoothStep(0f, riseDistance, t);
 
             if (t >= fadeStartNormalized)
             {
@@ -86,10 +91,14 @@ public class ScorePopup : MonoBehaviour
 
     private bool ResolveCanvas()
     {
+        if (canvas && !canvas.isActiveAndEnabled) canvas = null;
         if (!canvas)
-            canvas = GetComponentInParent<Canvas>();
-        if (!canvas)
-            canvas = FindFirstObjectByType<Canvas>();
+        {
+            var parentCanvas = GetComponentInParent<Canvas>();
+            if (parentCanvas && parentCanvas.isActiveAndEnabled && parentCanvas.isRootCanvas)
+                canvas = parentCanvas;
+        }
+        if (!canvas) canvas = FindBestCanvas();
 
         if (!canvas) return false;
         canvasRect = canvas.transform as RectTransform;
@@ -100,7 +109,7 @@ public class ScorePopup : MonoBehaviour
         return true;
     }
 
-    private void SetCanvasPosition(Vector3 worldPosition, float riseY)
+    private bool TryWorldToAnchored(Vector3 worldPosition, out Vector2 anchoredPosition)
     {
         var worldCamera = Camera.main;
         var uiCamera = canvas && canvas.renderMode == RenderMode.ScreenSpaceOverlay
@@ -109,10 +118,32 @@ public class ScorePopup : MonoBehaviour
                 ? canvas.worldCamera
                 : worldCamera;
         var sourceCamera = worldCamera ? worldCamera : uiCamera;
+        if (!sourceCamera && canvas && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+        {
+            anchoredPosition = default;
+            return false;
+        }
 
         var screenPoint = RectTransformUtility.WorldToScreenPoint(sourceCamera, worldPosition);
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, uiCamera, out var localPoint);
-        Rect.anchoredPosition = localPoint + Vector2.up * riseY;
+        var success = RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, uiCamera, out anchoredPosition);
+        return success;
+    }
+
+    private static Canvas FindBestCanvas()
+    {
+        var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        Canvas best = null;
+
+        for (var i = 0; i < canvases.Length; i++)
+        {
+            var candidate = canvases[i];
+            if (!candidate || !candidate.isActiveAndEnabled || !candidate.isRootCanvas) continue;
+            if (candidate.renderMode == RenderMode.WorldSpace) continue;
+            if (candidate.renderMode == RenderMode.ScreenSpaceOverlay) return candidate;
+            if (!best) best = candidate;
+        }
+
+        return best;
     }
 
     private void CacheBaseColor()
