@@ -75,6 +75,7 @@ public class MarioController : MonoBehaviour
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
     private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
+    private Transform GroundCheck => groundCheck ? groundCheck : groundCheck = transform.Find("GroundCheck");
     private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
 
     public MarioForm Form => form;
@@ -246,7 +247,7 @@ public class MarioController : MonoBehaviour
     {
         if (groundCheckSize.x <= 0f || groundCheckSize.y <= 0f) return false;
 
-        var probeCenter = groundCheck ? (Vector2)groundCheck.position : (Vector2)transform.position;
+        var probeCenter = GroundCheck ? (Vector2)GroundCheck.position : (Vector2)transform.position;
         var filter = new ContactFilter2D { useLayerMask = true, layerMask = groundLayer, useTriggers = false };
         var hitCount = Physics2D.OverlapBox(probeCenter, groundCheckSize, 0f, filter, groundHits);
         for (var i = 0; i < hitCount; i++)
@@ -302,16 +303,9 @@ public class MarioController : MonoBehaviour
         SceneManager.LoadScene(scene.name);
     }
 
-    private void OnValidate()
-    {
-        if (!groundCheck) groundCheck = transform.Find("GroundCheck");
-        if (!spriteFlipper) spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
-        if (!Application.isPlaying) form = initialForm;
-    }
-
     private void OnDrawGizmosSelected()
     {
-        var probeCenter = groundCheck ? (Vector2)groundCheck.position : (Vector2)transform.position;
+        var probeCenter = GroundCheck ? (Vector2)GroundCheck.position : (Vector2)transform.position;
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireCube(probeCenter, groundCheckSize);
 
