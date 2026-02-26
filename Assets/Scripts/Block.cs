@@ -4,7 +4,6 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider2D))]
-[RequireComponent(typeof(AnimatorCache))]
 public class Block : MonoBehaviour
 {
     public enum BlockKind
@@ -32,53 +31,58 @@ public class Block : MonoBehaviour
     [SerializeField] private BlockKind kind = BlockKind.Brick;
     [SerializeField] private BreakRule breakRule = BreakRule.BigOnly;
 
-    [Header("Contents (Linear Order)")]
     [SerializeField] private ContentStep[] contentSteps;
     [SerializeField] private bool becomeUsedWhenDepleted = true;
 
     [Header("State")]
     [SerializeField] private bool startsHidden;
-    [SerializeField] private bool hiddenNonSolidUntilReveal = true;
+    [SerializeField, Range(0.05f, 1f)] private float hiddenEditorOpacity = 0.35f;
 
     [Header("Visuals")]
     [SerializeField] private Sprite usedSprite;
 
     [Header("Spawns")]
-    [SerializeField] private GameObject breakPrefab;
-
-    [Header("Motion")]
-    [SerializeField, Min(0f)] private float bounceHeight = 0.18f;
-    [SerializeField, Min(0.01f)] private float bounceDuration = 0.1f;
+    [SerializeField] private ParticleSystem breakParticles;
     [SerializeField, Min(0f)] private float hitCooldown = 0.05f;
+    [SerializeField, Min(0f)] private float bumpHeight = 0.5f;
+    [SerializeField, Min(0.01f)] private float bumpDuration = 0.12f;
 
     private BoxCollider2D boxCollider2D;
-    private Vector3 startLocalPosition;
-    private Coroutine bounceRoutine;
     private float nextHitTime;
     private bool isUsed;
-    private bool isRevealed;
+    private bool isHidden;
     private bool initialTriggerState;
 
     private int currentStep;
     private int remainingInStep;
     private SpriteRenderer spriteRenderer;
-    private AnimatorCache animatorCache;
+    private Coroutine bumpRoutine;
+    private Vector3 spriteBaseLocalPosition;
+    [SerializeField, HideInInspector] private float spriteBaseAlpha = 1f;
+    [SerializeField, HideInInspector] private bool hasSpriteBaseAlpha;
+    private bool editorPreviewActive;
 
     private BoxCollider2D BoxCollider => boxCollider2D ? boxCollider2D : boxCollider2D = GetComponent<BoxCollider2D>();
-    private SpriteRenderer Sprite => spriteRenderer ? spriteRenderer : spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
-    private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
+    private SpriteRenderer Sprite => spriteRenderer ? spriteRenderer : spriteRenderer = ResolveSpriteRenderer();
+    private Transform BumpTarget => Sprite ? Sprite.transform : null;
     private Vector3 SpawnPosition => BoxCollider.bounds.center;
 
     private void Awake()
     {
-        startLocalPosition = transform.localPosition;
         initialTriggerState = BoxCollider.isTrigger;
+        CacheSpriteBaseAlpha();
 
         ResetContentProgress();
 
-        isRevealed = !startsHidden;
-        ApplyHidden(!isRevealed);
-        SyncAnimatorState();
+        isHidden = startsHidden;
+        RefreshVisualState();
+    }
+
+    private void OnValidate()
+    {
+        if (Application.isPlaying) return;
+        CacheSpriteBaseAlpha();
+        RefreshVisualState();
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -88,15 +92,14 @@ public class Block : MonoBehaviour
 
         var mario = body.GetComponent<MarioController>();
         if (!mario) return;
-        if (!IsFromBelow(collision)) return;
-        if (!IsMovingUp(body)) return;
+        if (!CanHitFromBelow(body, collision)) return;
 
         Hit(mario);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!startsHidden || isRevealed || !hiddenNonSolidUntilReveal) return;
+        if (!startsHidden || !isHidden) return;
         if (!other.attachedRigidbody) return;
 
         var mario = other.attachedRigidbody.GetComponent<MarioController>();
@@ -112,8 +115,8 @@ public class Block : MonoBehaviour
         if (Time.time < nextHitTime) return;
         nextHitTime = Time.time + hitCooldown;
 
-        if (!isRevealed) Reveal();
-        PlayHitAnimation();
+        if (isHidden) Reveal();
+        StartBump();
 
         if (TryDispense())
         {
@@ -132,9 +135,8 @@ public class Block : MonoBehaviour
 
     private void Reveal()
     {
-        isRevealed = true;
-        ApplyHidden(false);
-        TryTrigger("reveal");
+        isHidden = false;
+        RefreshVisualState();
     }
 
     private bool TryDispense()
@@ -172,67 +174,125 @@ public class Block : MonoBehaviour
         currentStep = contentSteps != null ? contentSteps.Length : 0;
         remainingInStep = 0;
 
-        if (usedSprite && Sprite) Sprite.sprite = usedSprite;
-        TryTrigger("used");
-        SyncAnimatorState();
+        RefreshVisualState();
     }
 
     private void Break()
     {
-        TryTrigger("break");
-        if (breakPrefab) PrefabPoolService.Spawn(breakPrefab, transform.position, Quaternion.identity);
+        if (breakParticles)
+        {
+            var effect = PrefabPoolService.Spawn(breakParticles.gameObject, BoxCollider.bounds.center, Quaternion.identity);
+            if (effect && effect.TryGetComponent<SpriteShardParticles>(out var shardParticles))
+                shardParticles.ApplySprite(Sprite ? Sprite.sprite : null);
+        }
+
         Destroy(gameObject);
     }
 
-    private void PlayHitAnimation()
+    private void RefreshVisualState()
     {
-        if (TryTrigger("hit")) return;
+        var sprite = Sprite;
+        if (sprite)
+        {
+            if (isUsed && usedSprite) sprite.sprite = usedSprite;
 
-        if (bounceRoutine != null) StopCoroutine(bounceRoutine);
-        bounceRoutine = StartCoroutine(Bounce());
+            if (Application.isPlaying)
+            {
+                SetSpriteAlpha(spriteBaseAlpha);
+                sprite.enabled = !isHidden;
+                editorPreviewActive = false;
+            }
+            else
+            {
+                sprite.enabled = true;
+                var previewAlpha = startsHidden ? spriteBaseAlpha * hiddenEditorOpacity : spriteBaseAlpha;
+                SetSpriteAlpha(previewAlpha);
+                editorPreviewActive = startsHidden;
+            }
+        }
+
+        BoxCollider.isTrigger = Application.isPlaying
+            ? isHidden
+            : initialTriggerState;
     }
 
-    private IEnumerator Bounce()
+    private void StartBump()
+    {
+        var bumpTarget = BumpTarget;
+        if (!bumpTarget) return;
+
+        if (bumpRoutine != null) StopCoroutine(bumpRoutine);
+        spriteBaseLocalPosition = bumpTarget.localPosition;
+        bumpRoutine = StartCoroutine(BumpSprite(bumpTarget));
+    }
+
+    private IEnumerator BumpSprite(Transform spriteTransform)
     {
         var elapsed = 0f;
-        while (elapsed < bounceDuration)
+        while (elapsed < bumpDuration)
         {
             elapsed += Time.deltaTime;
-            var t = Mathf.Clamp01(elapsed / bounceDuration);
-            var y = t < 0.5f
-                ? Mathf.Lerp(0f, bounceHeight, t * 2f)
-                : Mathf.Lerp(bounceHeight, 0f, (t - 0.5f) * 2f);
-
-            transform.localPosition = startLocalPosition + Vector3.up * y;
+            var t = Mathf.Clamp01(elapsed / bumpDuration);
+            var y = Mathf.Sin(t * Mathf.PI) * bumpHeight;
+            spriteTransform.localPosition = spriteBaseLocalPosition + Vector3.up * y;
             yield return null;
         }
 
-        transform.localPosition = startLocalPosition;
-        bounceRoutine = null;
+        if (spriteTransform) spriteTransform.localPosition = spriteBaseLocalPosition;
+        bumpRoutine = null;
     }
 
-    private void ApplyHidden(bool hidden)
+    private SpriteRenderer ResolveSpriteRenderer()
     {
-        if (Sprite) Sprite.enabled = !hidden;
-        if (hiddenNonSolidUntilReveal) BoxCollider.isTrigger = hidden ? true : initialTriggerState;
-        SyncAnimatorState();
+        foreach (var childRenderer in GetComponentsInChildren<SpriteRenderer>(true))
+            if (childRenderer && childRenderer.transform != transform)
+                return childRenderer;
+
+        return GetComponent<SpriteRenderer>();
     }
 
-    private void SyncAnimatorState()
+    private void CacheSpriteBaseAlpha()
     {
-        if (!Anim) return;
-        Anim.TrySet("isUsed", isUsed);
-        Anim.TrySet("isHidden", !isRevealed);
+        var sprite = Sprite;
+        if (!sprite) return;
+        if (!hasSpriteBaseAlpha)
+        {
+            spriteBaseAlpha = sprite.color.a <= 0f ? 1f : sprite.color.a;
+            hasSpriteBaseAlpha = true;
+            return;
+        }
+
+        if (Application.isPlaying) return;
+        if (startsHidden) return;
+        if (editorPreviewActive) return;
+
+        spriteBaseAlpha = sprite.color.a <= 0f ? 1f : sprite.color.a;
     }
 
-    private bool TryTrigger(string triggerName) => Anim && Anim.TrySetTrigger(triggerName);
+    private void SetSpriteAlpha(float alpha)
+    {
+        var sprite = Sprite;
+        if (!sprite) return;
+
+        var color = sprite.color;
+        color.a = alpha;
+        sprite.color = color;
+    }
 
     private static bool IsMovingUp(Rigidbody2D body) => body && body.linearVelocity.y > 0f;
 
-    private static bool IsFromBelow(Collision2D collision)
+    private bool CanHitFromBelow(Rigidbody2D body, Collision2D collision)
+    {
+        if (!body || collision == null) return false;
+        if (body.linearVelocity.y <= 0.01f && collision.relativeVelocity.y <= 0.01f) return false;
+        if (HasBottomContact(collision)) return true;
+        return body.position.y < transform.position.y - 0.05f;
+    }
+
+    private static bool HasBottomContact(Collision2D collision)
     {
         for (var i = 0; i < collision.contactCount; i++)
-            if (collision.GetContact(i).normal.y < -0.5f)
+            if (collision.GetContact(i).normal.y < -0.2f)
                 return true;
 
         return false;

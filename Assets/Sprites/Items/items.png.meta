@@ -186,6 +186,19 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 4096
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
@@ -476,7 +489,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: items_13
+      name: RedMushrrom
       rect:
         serializedVersion: 2
         x: 184
@@ -498,7 +511,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: items_14
+      name: GreenMushroom
       rect:
         serializedVersion: 2
         x: 214
@@ -696,7 +709,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: items_23
+      name: SuperStar_00
       rect:
         serializedVersion: 2
         x: 5
@@ -718,7 +731,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: items_24
+      name: SuperStar_01
       rect:
         serializedVersion: 2
         x: 35
@@ -740,7 +753,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: items_25
+      name: SuperStar_02
       rect:
         serializedVersion: 2
         x: 65
@@ -762,7 +775,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: items_26
+      name: SuperStar_03
       rect:
         serializedVersion: 2
         x: 95
@@ -784,7 +797,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: items_27
+      name: BrickCoin_00
       rect:
         serializedVersion: 2
         x: 128
@@ -806,7 +819,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: items_28
+      name: BrickCoin_01
       rect:
         serializedVersion: 2
         x: 160
@@ -828,7 +841,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: items_29
+      name: BrickCoin_03
       rect:
         serializedVersion: 2
         x: 220
@@ -872,7 +885,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: items_31
+      name: BrickCoin_02
       rect:
         serializedVersion: 2
         x: 191
@@ -880,7 +893,7 @@ TextureImporter:
         width: 1
         height: 14
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -909,13 +922,21 @@ TextureImporter:
       - key: SpriteEditor.SliceSettings
         value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":16.0,"y":16.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
+      BrickCoin_00: 8391431092616798930
+      BrickCoin_01: 6077338267653451029
+      BrickCoin_02: 1299342378
+      BrickCoin_03: -7121528990389113491
+      GreenMushroom: 6738218706411903907
+      RedMushrrom: -956252262595852801
+      SuperStar_00: 6191716412420617325
+      SuperStar_01: 6355480216337973169
+      SuperStar_02: -9098891631924085042
+      SuperStar_03: 1784186740104572286
       items_0: 6761164967045977113
       items_1: 5508725064705088119
       items_10: 8132948862792318974
       items_11: 2614870373251885436
       items_12: -2693009140137883590
-      items_13: -956252262595852801
-      items_14: 6738218706411903907
       items_15: -6338023803479276477
       items_16: 6395214293025444372
       items_17: -4538752222985096420
@@ -925,16 +946,8 @@ TextureImporter:
       items_20: 7911235102323647998
       items_21: -4058434812019303673
       items_22: 8436657204533251546
-      items_23: 6191716412420617325
-      items_24: 6355480216337973169
-      items_25: -9098891631924085042
-      items_26: 1784186740104572286
-      items_27: 8391431092616798930
-      items_28: 6077338267653451029
-      items_29: -7121528990389113491
       items_3: 6099581493293703690
       items_30: 7306274148607722714
-      items_31: 1299342378
       items_4: -5428206428529569624
       items_5: -7833671090200325546
       items_6: 5860025163644826426
