@@ -1,6 +1,4 @@
-using System.Numerics;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Vector2 = UnityEngine.Vector2;
 
 public static class RaycastExtension
@@ -8,7 +6,7 @@ public static class RaycastExtension
     private static LayerMask _layerMask = LayerMask.GetMask("Default");
     public static bool Raycast(this Rigidbody2D rigidbody, Vector2 direction)
     {
-        if (rigidbody.isKinematic)
+        if (rigidbody.bodyType == RigidbodyType2D.Kinematic)
         {
             return false;
         }

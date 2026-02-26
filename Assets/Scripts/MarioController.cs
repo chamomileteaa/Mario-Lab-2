@@ -39,6 +39,8 @@ public class MarioController : MonoBehaviour
     [Header("Form")]
     [SerializeField] private MarioForm initialForm = MarioForm.Small;
     [SerializeField, Min(0f)] private float damageInvulnerabilityTime = 1f;
+    [SerializeField, Range(0.05f, 1f)] private float invulnerabilityMinAlpha = 0.35f;
+    [SerializeField, Min(1f)] private float invulnerabilityFlickerSpeed = 18f;
 
     [Header("Collider")]
     [SerializeField, Min(0.01f)] private Vector2 smallColliderSize = new Vector2(1f, 1f);
@@ -49,7 +51,7 @@ public class MarioController : MonoBehaviour
     [Header("Ground Check")]
     [SerializeField] private Transform groundCheck;
     [SerializeField] private Vector2 groundCheckSize = new Vector2(0.6f, 0.12f);
-    [SerializeField] private LayerMask groundLayer;
+    [SerializeField, Range(0f, 1f)] private float groundNormalMinY = 0.55f;
 
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
@@ -69,13 +71,19 @@ public class MarioController : MonoBehaviour
     private float shortJumpSpeed;
     private MarioForm form;
     private MarioForm pendingGrowForm;
+    private SpriteRenderer[] spriteRenderers;
     private readonly Collider2D[] groundHits = new Collider2D[4];
+    private readonly ContactPoint2D[] groundContacts = new ContactPoint2D[8];
     private readonly Collider2D[] resizeHits = new Collider2D[4];
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
     private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
+    private Transform GroundCheck => groundCheck ? groundCheck : groundCheck = transform.Find("GroundCheck");
     private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
+    private SpriteRenderer[] SpriteRenderers => spriteRenderers != null && spriteRenderers.Length > 0
+        ? spriteRenderers
+        : spriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
 
     public MarioForm Form => form;
     public bool IsSmall => form == MarioForm.Small;
@@ -102,6 +110,7 @@ public class MarioController : MonoBehaviour
 
     private void OnDisable()
     {
+        SetSpriteOpacity(1f);
         jumpAction.SetEnabled(false);
         moveAction.SetEnabled(false);
     }
@@ -120,6 +129,7 @@ public class MarioController : MonoBehaviour
         isGrounded = CheckGrounded();
         coyoteTimer = isGrounded ? coyoteTime : Mathf.Max(0f, coyoteTimer - Time.deltaTime);
         damageInvulnerabilityTimer = Mathf.Max(0f, damageInvulnerabilityTimer - Time.deltaTime);
+        UpdateInvulnerabilityVisual();
 
         var jumpPressed = !PauseService.IsPaused(PauseType.Input) && (jumpAction?.action?.WasPressedThisFrame() ?? false);
         jumpBufferTimer = jumpPressed ? jumpBufferTime : Mathf.Max(0f, jumpBufferTimer - Time.deltaTime);
@@ -244,13 +254,21 @@ public class MarioController : MonoBehaviour
 
     private bool CheckGrounded()
     {
+        var contactCount = Body.GetContacts(groundContacts);
+        for (var i = 0; i < contactCount; i++)
+        {
+            var contact = groundContacts[i];
+            if (!contact.collider || contact.collider.isTrigger) continue;
+            if (contact.normal.y >= groundNormalMinY) return true;
+        }
+
         if (groundCheckSize.x <= 0f || groundCheckSize.y <= 0f) return false;
 
-        var probeCenter = groundCheck ? (Vector2)groundCheck.position : (Vector2)transform.position;
-        var filter = new ContactFilter2D { useLayerMask = true, layerMask = groundLayer, useTriggers = false };
+        var probeCenter = GroundCheck ? (Vector2)GroundCheck.position : (Vector2)transform.position;
+        var filter = new ContactFilter2D { useTriggers = false };
         var hitCount = Physics2D.OverlapBox(probeCenter, groundCheckSize, 0f, filter, groundHits);
         for (var i = 0; i < hitCount; i++)
-            if (groundHits[i] && !groundHits[i].isTrigger)
+            if (groundHits[i] && !groundHits[i].isTrigger && !IsOwnCollider(groundHits[i]))
                 return true;
 
         return false;
@@ -280,15 +298,16 @@ public class MarioController : MonoBehaviour
     private void UpdateSpriteDirection()
     {
         if (!Flipper) return;
-
-        var vertical = Mathf.Abs(moveInput.y) > InputDeadzone ? moveInput.y : Body.linearVelocity.y;
-        Flipper.SetDirection(new Vector2(moveInput.x, vertical));
+        if (!isGrounded) return;
+        if (Mathf.Abs(moveInput.x) <= InputDeadzone) return;
+        Flipper.SetDirection(new Vector2(moveInput.x, 0f));
     }
 
     private void ResolveDeath()
     {
         isDead = true;
         pendingGrow = false;
+        SetSpriteOpacity(1f);
         Anim.TrySetTrigger("die");
 
         GameData.lives--;
@@ -302,16 +321,9 @@ public class MarioController : MonoBehaviour
         SceneManager.LoadScene(scene.name);
     }
 
-    private void OnValidate()
-    {
-        if (!groundCheck) groundCheck = transform.Find("GroundCheck");
-        if (!spriteFlipper) spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
-        if (!Application.isPlaying) form = initialForm;
-    }
-
     private void OnDrawGizmosSelected()
     {
-        var probeCenter = groundCheck ? (Vector2)groundCheck.position : (Vector2)transform.position;
+        var probeCenter = GroundCheck ? (Vector2)GroundCheck.position : (Vector2)transform.position;
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireCube(probeCenter, groundCheckSize);
 
@@ -346,11 +358,11 @@ public class MarioController : MonoBehaviour
 
     private bool TryApplyBigCollider()
     {
-        var filter = new ContactFilter2D { useLayerMask = true, layerMask = groundLayer, useTriggers = false };
+        var filter = new ContactFilter2D { useTriggers = false };
         var center = (Vector2)transform.position + bigColliderOffset;
         var hitCount = Physics2D.OverlapBox(center, bigColliderSize, 0f, filter, resizeHits);
         for (var i = 0; i < hitCount; i++)
-            if (resizeHits[i] && resizeHits[i] != BodyCollider && !resizeHits[i].isTrigger)
+            if (resizeHits[i] && !resizeHits[i].isTrigger && !IsOwnCollider(resizeHits[i]))
                 return false;
 
         SetBodyCollider(bigColliderSize, bigColliderOffset);
@@ -373,5 +385,38 @@ public class MarioController : MonoBehaviour
         if (Mathf.Abs(inputX) <= InputDeadzone) return false;
         if (Mathf.Abs(velocityX) <= InputDeadzone) return false;
         return Mathf.Sign(inputX) != Mathf.Sign(velocityX);
+    }
+
+    private bool IsOwnCollider(Collider2D collider)
+    {
+        if (!collider) return false;
+        if (collider == BodyCollider) return true;
+        return collider.attachedRigidbody && collider.attachedRigidbody == Body;
+    }
+
+    private void UpdateInvulnerabilityVisual()
+    {
+        if (damageInvulnerabilityTimer <= 0f)
+        {
+            SetSpriteOpacity(1f);
+            return;
+        }
+
+        var pulse = Mathf.PingPong(Time.time * invulnerabilityFlickerSpeed, 1f);
+        var alpha = Mathf.Lerp(invulnerabilityMinAlpha, 1f, pulse);
+        SetSpriteOpacity(alpha);
+    }
+
+    private void SetSpriteOpacity(float alpha)
+    {
+        var renderers = SpriteRenderers;
+        for (var i = 0; i < renderers.Length; i++)
+        {
+            var renderer = renderers[i];
+            if (!renderer) continue;
+            var color = renderer.color;
+            color.a = alpha;
+            renderer.color = color;
+        }
     }
 }
