@@ -9,6 +9,8 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(AnimatorCache))]
 public class MarioController : MonoBehaviour
 {
+    //updates UI when collision
+
     public enum MarioForm
     {
         Small = 0,
@@ -193,7 +195,20 @@ public class MarioController : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
+
+        if (!collision) return;
+        if (isDead) return;
+
+        var stompable = collision.GetComponentInParent<IStompable>();
+        if (stompable != null) return;
+        if (!IsEnemyCollider(collision)) return;
+        TakeDamage();
+
+//if mario interacts update UI
+
+
         HandleEnemyTrigger(collision);
+
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -601,7 +616,7 @@ public class MarioController : MonoBehaviour
 
     private IEnumerator DeathSequence()
     {
-        GameData.lives--;
+        GameData.Instance.lives--;
 
         Body.linearVelocity = Vector2.zero;
         Body.angularVelocity = 0f;
@@ -637,7 +652,7 @@ public class MarioController : MonoBehaviour
         }
 
         deathRoutine = null;
-        if (GameData.lives <= 0)
+        if (GameData.Instance.lives <= 0)
         {
             SceneManager.LoadScene("GameOver");
             yield break;

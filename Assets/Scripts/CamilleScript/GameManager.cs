@@ -1,64 +1,65 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
     public UIScript ui;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        GameData.Reset();
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-    public static void Dead()
-    {
-        print("Dead");
-
-        GameData.lives--; 
-        if (GameData.lives == 0)
+        if (SceneManager.GetActiveScene().name == "TitleScene")
         {
-            GameOver();
-            //do gameManager.NewGame() on the gameover scene if player presses replay
+            GameData.Instance.ResetAll();
         }
-
         else
         {
-            //reload current scene
-            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-            UnityEngine.SceneManagement.SceneManager.LoadScene(scene.name);
+            //GameData.Instance.ResetLevel();
+            Debug.Log("Reset Level");
+        }
+
+        if (ui != null)
+            ui.UpdateUI();
+    }
+
+    public void Dead()
+    {
+        Debug.Log("Dead");
+
+        GameData.Instance.LoseLife();
+
+        if (ui != null)
+            ui.UpdateUI();
+
+        if (GameData.Instance.lives <= 0)
+        {
+            GameOver();
+        }
+        else
+        {
+            // Reload current scene
+            var scene = SceneManager.GetActiveScene();
+            SceneManager.LoadScene(scene.name);
         }
     }
 
-    public static void GameOver()
+    public void GameOver()
     {
-        UnityEngine.SceneManagement.SceneManager.LoadScene("GameOver");
-        GameData.Reset();
+        SceneManager.LoadScene("GameOver");
+        GameData.Instance.ResetAll();
     }
 
     public void AddCoin()
     {
-        GameData.coins++;
-        ui.UpdateUI();
-        //play coin audio
-
-        if (GameData.coins == 100)
-        {
-            GameData.coins = 0;
-            AddLife();
-        }
+        GameData.Instance.AddCoin();
+        if (ui != null)
+            ui.UpdateUI();
     }
 
     public void AddLife()
     {
-        GameData.lives++;
-        ui.UpdateUI();
-        //play audio
+        GameData.Instance.AddLife();
+        if (ui != null)
+            ui.UpdateUI();
+        //add audio
     }
 }
