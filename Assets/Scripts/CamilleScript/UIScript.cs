@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 using TMPro;
 
 public class UIScript : MonoBehaviour
@@ -21,29 +22,47 @@ public class UIScript : MonoBehaviour
 
     public GameManager gameManager;
 
+    //public float? timer = null;
+
     //add audio here whenever coin collected??
 
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        timeLeft = 400;
+        if (SceneManager.GetActiveScene().name == "GameScene")
+        {
+            timeLeft = 400f;
+        }
+        else
+        {
+            //timer = null; 
+            timerTxt.text = "TIME " + timeLeft.ToString();
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
+        if (SceneManager.GetActiveScene().name != "GameScene") return;
+
         if (timeLeft > 0)
         {
             timeLeft -= Time.deltaTime;
-            timerTxt.text = "TIME " + timeLeft.ToString("000");
+            timerTxt.text = "TIME " + Mathf.Ceil(timeLeft).ToString("000");
         }
-        else if (!gameOver)
+
+        else
+        {
+        timerTxt.text = "TIME"; 
+
+        if (!gameOver)
         {
             gameOver = true;
             if (gameManager != null)
                 gameManager.Dead();
         }
+    }
 
     }
 
