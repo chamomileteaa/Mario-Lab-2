@@ -6,14 +6,7 @@ public class MarioAudio: MonoBehaviour
 
     [Header("Cues")]
     [SerializeField] private AudioCue jumpCue;
-    [SerializeField] private AudioCue landCue;
-    [SerializeField] private AudioCue attackCue;
-    [SerializeField] private AudioCue deathCue;
-
     public void PlayJump() => audioPlayer.Play(jumpCue);
-    public void PlayLand() => audioPlayer.Play(landCue);
-    public void PlayAttack() => audioPlayer.Play(attackCue);
-    public void PlayDeath() => audioPlayer.Play(deathCue);
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {

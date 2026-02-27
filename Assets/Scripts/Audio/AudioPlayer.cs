@@ -20,4 +20,12 @@ public class AudioPlayer : MonoBehaviour
 
         source.PlayOneShot(cue.clip, cue.volume);
     }
+    
+    public void PlayExclusive(AudioCue cue)
+    {
+        source.Stop();
+        source.clip = cue.clip;
+        source.loop = true;
+        source.Play();
+    }
 }

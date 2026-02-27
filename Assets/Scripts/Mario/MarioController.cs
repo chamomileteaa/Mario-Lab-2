@@ -66,6 +66,9 @@ public class MarioController : MonoBehaviour
     [SerializeField, Min(0f)] private float deathOffscreenBuffer = 1f;
     [SerializeField, Min(0.1f)] private float deathFallbackFallDistance = 8f;
 
+    [SerializeField] private MarioAudio marioSFX;
+    [SerializeField] private MusicPlayer LevelMusic;
+
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
     private MarioVisuals marioVisuals;
@@ -112,6 +115,7 @@ public class MarioController : MonoBehaviour
 
     private void Awake()
     {
+        LevelMusic.PlayGroundTheme();
         form = (MarioForm)Mathf.Clamp((int)initialForm, (int)MarioForm.Small, (int)MarioForm.Fire);
         ApplySmallCollider();
 
@@ -214,6 +218,7 @@ public class MarioController : MonoBehaviour
     {
         var targetDuration = duration < 0f ? defaultStarPowerDuration : duration;
         if (targetDuration <= 0f) return;
+        LevelMusic.PlayInvincibilityCue();
         starPowerTimer = Mathf.Max(starPowerTimer, targetDuration);
     }
 
@@ -254,6 +259,14 @@ public class MarioController : MonoBehaviour
     {
         damageInvulnerabilityTimer = Mathf.Max(0f, damageInvulnerabilityTimer - Time.deltaTime);
         if (PauseService.IsPaused(PauseType.Physics)) return;
+        
+        float previousStar = starPowerTimer;
+        starPowerTimer = Mathf.Max(0f, starPowerTimer - Time.deltaTime);
+
+        if (previousStar > 0f && starPowerTimer == 0f)
+        {
+            LevelMusic.PlayGroundTheme();  
+        }
 
         superTimer = Mathf.Max(0f, superTimer - Time.deltaTime);
         starPowerTimer = Mathf.Max(0f, starPowerTimer - Time.deltaTime);
@@ -270,6 +283,7 @@ public class MarioController : MonoBehaviour
         if (velocity.y < 0f) velocity.y = 0f;
         velocity.y = jumpSpeed;
         Body.linearVelocity = velocity;
+        marioSFX.PlayJump();
     }
 
     private void ApplyHorizontalMovement()
@@ -341,6 +355,8 @@ public class MarioController : MonoBehaviour
     {
         if (isDead) return;
 
+        LevelMusic.PlayDeathCue();
+
         isDead = true;
         pendingGrow = false;
         damageInvulnerabilityTimer = 0f;
@@ -355,7 +371,7 @@ public class MarioController : MonoBehaviour
         Visuals?.ResetVisuals();
         Visuals?.PlayDeath();
         PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, true);
-
+        
         if (deathRoutine != null) StopCoroutine(deathRoutine);
         deathRoutine = StartCoroutine(DeathSequence());
     }
