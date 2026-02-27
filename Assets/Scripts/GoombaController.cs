@@ -1,12 +1,13 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(EntityController))]
 [RequireComponent(typeof(AnimatorCache))]
 [RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(Collider2D))]
-public class GoombaController : MonoBehaviour, IStompable
+[RequireComponent(typeof(BoxCollider2D))]
+public class GoombaController : MonoBehaviour, IStompHandler
 {
     private const string SquashTrigger = "squash";
 
@@ -17,12 +18,13 @@ public class GoombaController : MonoBehaviour, IStompable
     [SerializeField] private Vector3 scorePopupOffset = new Vector3(0f, 0.35f, 0f);
 
     [Header("Knock Away")]
-    [SerializeField] private bool defeatWhenKnockedAway = true;
+    [FormerlySerializedAs("defeatWhenKnockedAway")]
+    [SerializeField] private bool defeatWhenKnockedBack = true;
     [SerializeField, Min(0.5f)] private float despawnBelowSpawnDistance = 12f;
 
     private EntityController entityController;
     private Rigidbody2D body2D;
-    private Collider2D bodyCollider2D;
+    private BoxCollider2D bodyCollider2D;
     private Animator animatorComponent;
     private AnimatorCache animatorCache;
     private EnemyAudio enemyAudio;
@@ -35,7 +37,7 @@ public class GoombaController : MonoBehaviour, IStompable
 
     private EntityController Entity => entityController ? entityController : entityController = GetComponent<EntityController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
-    private Collider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<Collider2D>();
+    private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
     private Animator Animator => animatorComponent ? animatorComponent : animatorComponent = GetComponent<Animator>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
     private EnemyAudio Audio => enemyAudio ? enemyAudio : enemyAudio = GetComponent<EnemyAudio>();
@@ -60,12 +62,12 @@ public class GoombaController : MonoBehaviour, IStompable
         Body.angularVelocity = 0f;
         BodyCollider.enabled = true;
         ResetAnimationState();
-        Entity.KnockedAway += OnEntityKnockedAway;
+        Entity.KnockbackAppliedWithType += OnEntityKnockedBack;
     }
 
     private void OnDisable()
     {
-        Entity.KnockedAway -= OnEntityKnockedAway;
+        Entity.KnockbackAppliedWithType -= OnEntityKnockedBack;
 
         if (squishRoutine == null) return;
         StopCoroutine(squishRoutine);
@@ -79,7 +81,7 @@ public class GoombaController : MonoBehaviour, IStompable
         PrefabPoolService.Despawn(gameObject);
     }
 
-    public bool TryStomp(MarioController mario, Vector2 hitPoint)
+    public bool TryHandleStomp(in EnemyImpactContext context)
     {
         if (defeated) return false;
         DefeatBySquish();
@@ -124,9 +126,9 @@ public class GoombaController : MonoBehaviour, IStompable
         gameObject.tag = "Untagged";
     }
 
-    private void OnEntityKnockedAway(EntityController controller)
+    private void OnEntityKnockedBack(EntityController controller, EnemyImpactType impactType)
     {
-        if (!defeatWhenKnockedAway) return;
+        if (impactType != EnemyImpactType.Star && !defeatWhenKnockedBack) return;
         if (defeated) return;
         SetDefeatedState();
         Audio?.PlayDeath();

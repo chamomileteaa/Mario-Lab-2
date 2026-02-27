@@ -63,43 +63,56 @@ public class Block : MonoBehaviour
     [SerializeField, Min(0f)] private float bumpReactionHeight = 0.04f;
 
     private BoxCollider2D boxCollider2D;
+    private SpriteRenderer spriteRenderer;
+    private Collider2D[] ownColliders = Array.Empty<Collider2D>();
+    private readonly HashSet<int> ownColliderIds = new HashSet<int>();
+    private readonly Collider2D[] bumpHits = new Collider2D[12];
+    private readonly HashSet<int> bumpNotifiedIds = new HashSet<int>();
+    private readonly Dictionary<int, IBlockBumpHandler[]> bumpHandlersByColliderId = new Dictionary<int, IBlockBumpHandler[]>(32);
+    private readonly Dictionary<int, MarioController> marioByColliderId = new Dictionary<int, MarioController>(8);
+
     private float nextHitTime;
+    private float multiEndTime = -1f;
     private bool isUsed;
     private bool isHidden;
     private bool initialTriggerState;
-
-    private float multiEndTime = -1f;
-    private SpriteRenderer spriteRenderer;
+    private float spriteBaseAlpha = 1f;
     private Coroutine bumpRoutine;
     private Vector3 spriteBaseLocalPosition;
-    [SerializeField, HideInInspector] private float spriteBaseAlpha = 1f;
-    [SerializeField, HideInInspector] private bool hasSpriteBaseAlpha;
-    private bool editorPreviewActive;
-    private readonly Collider2D[] bumpHits = new Collider2D[12];
-    private readonly HashSet<int> bumpNotifiedIds = new HashSet<int>();
 
     private BoxCollider2D BoxCollider => boxCollider2D ? boxCollider2D : boxCollider2D = GetComponent<BoxCollider2D>();
     private SpriteRenderer Sprite => spriteRenderer ? spriteRenderer : spriteRenderer = ResolveSpriteRenderer();
-    private Transform BumpTarget => Sprite ? Sprite.transform : null;
     private Vector3 SpawnPosition => BoxCollider.bounds.center;
 
     private void Awake()
     {
         NormalizeByKind();
         initialTriggerState = BoxCollider.isTrigger;
-        CacheSpriteBaseAlpha();
-        ResetContentState();
+        RebuildOwnColliderCache();
+        CacheSpriteAlpha();
 
+        multiEndTime = -1f;
         isHidden = startsHidden;
-        RefreshVisualState();
+        ApplyVisualState();
+    }
+
+    private void OnEnable()
+    {
+        RebuildOwnColliderCache();
     }
 
     private void OnValidate()
     {
         if (Application.isPlaying) return;
         NormalizeByKind();
-        CacheSpriteBaseAlpha();
-        RefreshVisualState();
+        CacheSpriteAlpha();
+        ApplyVisualState();
+    }
+
+    private void OnDisable()
+    {
+        bumpHandlersByColliderId.Clear();
+        marioByColliderId.Clear();
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -124,24 +137,41 @@ public class Block : MonoBehaviour
     {
         if (!collider) return false;
         if (!collider.CompareColliderTag("Player")) return false;
-        if (!collider.TryGetComponentInParent(out MarioController mario)) return false;
-
-        var body = collider.attachedRigidbody ? collider.attachedRigidbody : mario.GetComponent<Rigidbody2D>();
-        if (!body) return false;
+        if (!TryResolveMario(collider, out var mario, out var body)) return false;
         if (!CanHeadbuttFromBelow(body, collider.bounds, requireUpward)) return false;
 
-        Hit(mario);
+        HandleHit(mario);
+        return true;
+    }
+
+    private bool TryResolveMario(Collider2D collider, out MarioController mario, out Rigidbody2D body)
+    {
+        mario = null;
+        body = null;
+
+        var colliderId = collider.GetInstanceID();
+        if (marioByColliderId.TryGetValue(colliderId, out mario) && mario)
+        {
+            body = mario.GetComponent<Rigidbody2D>();
+            return body;
+        }
+
+        body = collider.attachedRigidbody;
+        if (!body) return false;
+
+        if (!body.TryGetComponent(out mario) && !collider.TryGetComponentInParent(out mario))
+            return false;
+
+        marioByColliderId[colliderId] = mario;
         return true;
     }
 
     private bool CanHeadbuttFromBelow(Rigidbody2D body, Bounds marioBounds, bool requireUpward)
     {
-        if (!body) return false;
-
-        var blockBounds = BoxCollider.bounds;
         var verticalSpeed = body.linearVelocity.y;
         if (requireUpward && verticalSpeed <= 0.01f) return false;
 
+        var blockBounds = BoxCollider.bounds;
         const float sideInset = 0.02f;
         if (marioBounds.center.x <= blockBounds.min.x + sideInset) return false;
         if (marioBounds.center.x >= blockBounds.max.x - sideInset) return false;
@@ -149,24 +179,27 @@ public class Block : MonoBehaviour
         const float minHeadGap = -0.3f;
         const float maxHeadGap = 0.3f;
         var headGap = blockBounds.min.y - marioBounds.max.y;
-        if (headGap < minHeadGap) return false;
-        if (headGap > maxHeadGap) return false;
+        if (headGap < minHeadGap || headGap > maxHeadGap) return false;
 
         if (verticalSpeed > 0.01f) return true;
         return !requireUpward && marioBounds.max.y >= blockBounds.min.y - 0.04f;
     }
 
-    private void Hit(MarioController mario)
+    private void HandleHit(MarioController mario)
     {
         if (Time.time < nextHitTime) return;
         nextHitTime = Time.time + hitCooldown;
 
-        if (isHidden) Reveal();
-        StartBump();
-        NotifyBumpReactives(mario);
+        if (isHidden)
+        {
+            isHidden = false;
+            ApplyVisualState();
+        }
 
-        if (TryDispense())
-            return;
+        StartBump();
+        NotifyBumpHandlers(mario);
+
+        if (TryDispenseContent()) return;
 
         if (kind == BlockKind.Brick && CanBreak(mario))
         {
@@ -174,17 +207,11 @@ public class Block : MonoBehaviour
             return;
         }
 
-        if (kind == BlockKind.Question && !HasContentLeft && depletionOutcome == DepletionOutcome.Exhausted)
+        if (kind == BlockKind.Question && depletionOutcome == DepletionOutcome.Exhausted)
             SetEmpty();
     }
 
-    private void Reveal()
-    {
-        isHidden = false;
-        RefreshVisualState();
-    }
-
-    private bool TryDispense()
+    private bool TryDispenseContent()
     {
         if (!HasSpawnableContent) return false;
 
@@ -198,32 +225,18 @@ public class Block : MonoBehaviour
             case BlockContent.Multi:
                 if (multiEndTime < 0f)
                     multiEndTime = Time.time + multiDuration;
-                if (Time.time >= multiEndTime)
+
+                if (Time.time <= multiEndTime)
                 {
-                    DepleteContent();
+                    SpawnContent();
                     return true;
                 }
 
-                SpawnContent();
+                DepleteContent();
                 return true;
 
             default:
                 return false;
-        }
-    }
-
-    private bool HasContentLeft
-    {
-        get
-        {
-            if (!HasSpawnableContent) return false;
-
-            return contentType switch
-            {
-                BlockContent.Single => true,
-                BlockContent.Multi => multiEndTime < 0f || Time.time <= multiEndTime,
-                _ => false
-            };
         }
     }
 
@@ -232,6 +245,7 @@ public class Block : MonoBehaviour
     private bool CanBreak(MarioController mario)
     {
         if (kind != BlockKind.Brick) return false;
+
         return breakRule switch
         {
             BreakRule.Always => true,
@@ -248,40 +262,46 @@ public class Block : MonoBehaviour
         kind = BlockKind.Solid;
         contentType = BlockContent.None;
         multiEndTime = -1f;
+        ApplyVisualState();
+    }
 
-        RefreshVisualState();
+    private void DepleteContent()
+    {
+        contentType = BlockContent.None;
+        multiEndTime = -1f;
+
+        if (kind == BlockKind.Brick && depletionOutcome == DepletionOutcome.Break)
+        {
+            Break();
+            return;
+        }
+
+        SetEmpty();
     }
 
     private void Break()
     {
-        try
+        if (breakParticles)
+            PrefabPoolService.Spawn(breakParticles.gameObject, BoxCollider.bounds.center, Quaternion.identity);
+
+        if (bumpRoutine != null)
         {
-            if (breakParticles)
-            {
-                PrefabPoolService.Spawn(breakParticles.gameObject, BoxCollider.bounds.center, Quaternion.identity);
-            }
+            StopCoroutine(bumpRoutine);
+            bumpRoutine = null;
         }
-        finally
-        {
-            if (bumpRoutine != null)
-            {
-                StopCoroutine(bumpRoutine);
-                bumpRoutine = null;
-            }
 
-            foreach (var renderer in GetComponentsInChildren<SpriteRenderer>(true))
-                if (renderer) renderer.enabled = false;
+        foreach (var renderer in GetComponentsInChildren<SpriteRenderer>(true))
+            if (renderer) renderer.enabled = false;
 
-            foreach (var collider in GetComponentsInChildren<Collider2D>(true))
-                if (collider) collider.enabled = false;
+        foreach (var collider in ownColliders)
+            if (collider) collider.enabled = false;
 
-            enabled = false;
-            gameObject.SetActive(false);
-            Destroy(gameObject);
-        }
+        enabled = false;
+        gameObject.SetActive(false);
+        Destroy(gameObject);
     }
 
-    private void RefreshVisualState()
+    private void ApplyVisualState()
     {
         var sprite = Sprite;
         if (sprite)
@@ -290,35 +310,34 @@ public class Block : MonoBehaviour
 
             if (Application.isPlaying)
             {
-                SetSpriteAlpha(spriteBaseAlpha);
                 sprite.enabled = !isHidden;
-                editorPreviewActive = false;
+                SetSpriteAlpha(spriteBaseAlpha);
             }
             else
             {
                 sprite.enabled = true;
                 var previewAlpha = startsHidden ? spriteBaseAlpha * hiddenEditorOpacity : spriteBaseAlpha;
                 SetSpriteAlpha(previewAlpha);
-                editorPreviewActive = startsHidden;
             }
         }
 
-        BoxCollider.isTrigger = Application.isPlaying
-            ? isHidden
-            : initialTriggerState;
+        BoxCollider.isTrigger = Application.isPlaying ? isHidden : initialTriggerState;
     }
 
     private void StartBump()
     {
-        var bumpTarget = BumpTarget;
-        if (!bumpTarget) return;
+        var sprite = Sprite;
+        if (!sprite) return;
 
-        if (bumpRoutine != null) StopCoroutine(bumpRoutine);
-        spriteBaseLocalPosition = bumpTarget.localPosition;
-        bumpRoutine = StartCoroutine(BumpSprite(bumpTarget));
+        if (bumpRoutine != null)
+            StopCoroutine(bumpRoutine);
+
+        var spriteTransform = sprite.transform;
+        spriteBaseLocalPosition = spriteTransform.localPosition;
+        bumpRoutine = StartCoroutine(BumpSprite(spriteTransform));
     }
 
-    private void NotifyBumpReactives(MarioController mario)
+    private void NotifyBumpHandlers(MarioController mario)
     {
         var bounds = BoxCollider.bounds;
         var center = new Vector2(bounds.center.x, bounds.max.y + bumpReactionHeight + bumpReactionSize.y * 0.5f);
@@ -327,21 +346,49 @@ public class Block : MonoBehaviour
         if (bumpReactionSize.x > 0f && bumpReactionSize.y > 0f)
         {
             bumpNotifiedIds.Clear();
-
-            var filter = new ContactFilter2D();
-            filter.useTriggers = true;
+            var filter = new ContactFilter2D { useTriggers = true };
             var hitCount = Physics2D.OverlapBox(center, bumpReactionSize, 0f, filter, bumpHits);
+
             for (var i = 0; i < hitCount; i++)
             {
                 var hit = bumpHits[i];
                 bumpHits[i] = null;
-                if (!hit) continue;
-                if (IsOwnCollider(hit)) continue;
-                NotifyReactiveBehaviours(hit, context);
+                if (!hit || IsOwnCollider(hit)) continue;
+                NotifyHandlersForCollider(hit, in context);
             }
         }
 
         Bumped?.Invoke(context);
+    }
+
+    private void NotifyHandlersForCollider(Collider2D hit, in BlockBumpContext context)
+    {
+        var handlers = GetCachedBumpHandlers(hit);
+        for (var i = 0; i < handlers.Length; i++)
+        {
+            if (handlers[i] is not MonoBehaviour behaviour || !behaviour || behaviour == this) continue;
+            if (!bumpNotifiedIds.Add(behaviour.GetInstanceID())) continue;
+            handlers[i].HandleBlockBump(in context);
+        }
+    }
+
+    private IBlockBumpHandler[] GetCachedBumpHandlers(Collider2D hit)
+    {
+        var colliderId = hit.GetInstanceID();
+        if (bumpHandlersByColliderId.TryGetValue(colliderId, out var cachedHandlers))
+            return cachedHandlers;
+
+        var behaviours = hit.GetComponentsInParent<MonoBehaviour>(true);
+        var handlers = new List<IBlockBumpHandler>(2);
+        for (var i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] is IBlockBumpHandler handler)
+                handlers.Add(handler);
+        }
+
+        cachedHandlers = handlers.Count == 0 ? Array.Empty<IBlockBumpHandler>() : handlers.ToArray();
+        bumpHandlersByColliderId[colliderId] = cachedHandlers;
+        return cachedHandlers;
     }
 
     private IEnumerator BumpSprite(Transform spriteTransform)
@@ -356,55 +403,47 @@ public class Block : MonoBehaviour
             yield return null;
         }
 
-        if (spriteTransform) spriteTransform.localPosition = spriteBaseLocalPosition;
+        if (spriteTransform)
+            spriteTransform.localPosition = spriteBaseLocalPosition;
+
         bumpRoutine = null;
     }
 
-    private void NotifyReactiveBehaviours(Collider2D hit, BlockBumpContext context)
+    private void RebuildOwnColliderCache()
     {
-        var behaviours = hit.GetComponentsInParent<MonoBehaviour>(true);
-        for (var i = 0; i < behaviours.Length; i++)
-        {
-            var behaviour = behaviours[i];
-            if (!behaviour || behaviour == this) continue;
-            if (behaviour is not IBlockBumpReactive reactive) continue;
-
-            var behaviourId = behaviour.GetInstanceID();
-            if (!bumpNotifiedIds.Add(behaviourId)) continue;
-            reactive.OnBlockBumped(context);
-        }
+        ownColliders = GetComponentsInChildren<Collider2D>(true);
+        ownColliderIds.Clear();
+        for (var i = 0; i < ownColliders.Length; i++)
+            if (ownColliders[i])
+                ownColliderIds.Add(ownColliders[i].GetInstanceID());
     }
 
     private bool IsOwnCollider(Collider2D collider)
     {
-        if (!collider) return false;
-        var owner = collider.GetComponentInParent<Block>();
-        return owner && owner == this;
+        return collider && ownColliderIds.Contains(collider.GetInstanceID());
     }
 
     private SpriteRenderer ResolveSpriteRenderer()
     {
-        foreach (var childRenderer in GetComponentsInChildren<SpriteRenderer>(true))
+        var childRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+        for (var i = 0; i < childRenderers.Length; i++)
+        {
+            var childRenderer = childRenderers[i];
             if (childRenderer && childRenderer.transform != transform)
                 return childRenderer;
+        }
 
         return GetComponent<SpriteRenderer>();
     }
 
-    private void CacheSpriteBaseAlpha()
+    private void CacheSpriteAlpha()
     {
         var sprite = Sprite;
-        if (!sprite) return;
-        if (!hasSpriteBaseAlpha)
+        if (!sprite)
         {
-            spriteBaseAlpha = sprite.color.a <= 0f ? 1f : sprite.color.a;
-            hasSpriteBaseAlpha = true;
+            spriteBaseAlpha = 1f;
             return;
         }
-
-        if (Application.isPlaying) return;
-        if (startsHidden) return;
-        if (editorPreviewActive) return;
 
         spriteBaseAlpha = sprite.color.a <= 0f ? 1f : sprite.color.a;
     }
@@ -424,24 +463,6 @@ public class Block : MonoBehaviour
         PrefabPoolService.Spawn(contentPrefab, SpawnPosition, Quaternion.identity);
     }
 
-    private void ResetContentState()
-    {
-        multiEndTime = -1f;
-    }
-
-    private void DepleteContent()
-    {
-        contentType = BlockContent.None;
-        multiEndTime = -1f;
-        if (kind == BlockKind.Brick && depletionOutcome == DepletionOutcome.Break)
-        {
-            Break();
-            return;
-        }
-
-        SetEmpty();
-    }
-
     private void NormalizeByKind()
     {
         if (kind != BlockKind.Brick)
@@ -450,11 +471,9 @@ public class Block : MonoBehaviour
             breakRule = BreakRule.Never;
         }
 
-        if (kind == BlockKind.Solid)
-        {
-            contentType = BlockContent.None;
-            contentPrefab = null;
-            multiEndTime = -1f;
-        }
+        if (kind != BlockKind.Solid) return;
+        contentType = BlockContent.None;
+        contentPrefab = null;
+        multiEndTime = -1f;
     }
 }

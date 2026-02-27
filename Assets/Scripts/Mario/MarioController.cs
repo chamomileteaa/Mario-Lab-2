@@ -6,11 +6,10 @@ using UnityEngine.SceneManagement;
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
-[RequireComponent(typeof(AnimatorCache))]
+[RequireComponent(typeof(MarioVisuals))]
+[RequireComponent(typeof(MarioCollisionHandler))]
 public class MarioController : MonoBehaviour
 {
-    //updates UI when collision
-
     public enum MarioForm
     {
         Small = 0,
@@ -20,7 +19,6 @@ public class MarioController : MonoBehaviour
 
     private const float InputDeadzone = 0.01f;
     private const float CrouchThreshold = -0.5f;
-    private const float MinAnimMoveSpeed = 0.2f;
     private const float MinDeathBounceSpeed = 11f;
     private const PauseType MarioPauseBypassTypes = PauseType.Physics | PauseType.Animation;
     private const PauseType GameplayPauseTypes = PauseType.Physics | PauseType.Animation | PauseType.Input;
@@ -45,15 +43,10 @@ public class MarioController : MonoBehaviour
     [Header("Form")]
     [SerializeField] private MarioForm initialForm = MarioForm.Small;
     [SerializeField, Min(0f)] private float damageInvulnerabilityTime = 1f;
-    [SerializeField, Range(0.05f, 1f)] private float invulnerabilityMinAlpha = 0.35f;
-    [SerializeField, Min(1f)] private float invulnerabilityFlickerSpeed = 18f;
 
-    [Header("Combat")]
-    [SerializeField, Min(0.1f)] private float stompBounceSpeed = 12f;
-    [SerializeField, MinMaxInt(-1f, 1f)] private MinMaxFloat stompContactGap = new MinMaxFloat(-0.55f, 0.3f);
-    [SerializeField, Min(0f)] private float stompContactPointTolerance = 0.08f;
-    [SerializeField, Min(0f)] private float stompSideTolerance = 0.18f;
-    [SerializeField, Min(0f)] private float stompMaxUpwardVelocity = 0.75f;
+    [Header("Power")]
+    [SerializeField, Min(0f)] private float defaultSuperDuration = 10f;
+    [SerializeField, Min(0f)] private float defaultStarPowerDuration = 10f;
 
     [Header("Collider")]
     [SerializeField, Min(0.01f)] private Vector2 smallColliderSize = new Vector2(1f, 1f);
@@ -75,61 +68,61 @@ public class MarioController : MonoBehaviour
 
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
-    private AnimatorCache animatorCache;
-    private SpriteFlipper spriteFlipper;
+    private MarioVisuals marioVisuals;
     private Camera sceneCamera;
 
     private Vector2 moveInput;
     private bool jumpHeld;
     private bool isGrounded;
     private bool isDead;
-    private bool isSuper;
     private bool pendingGrow;
     private float coyoteTimer;
     private float jumpBufferTimer;
     private float damageInvulnerabilityTimer;
+    private float superTimer;
+    private float starPowerTimer;
     private float jumpSpeed;
     private float shortJumpSpeed;
     private MarioForm form;
     private MarioForm pendingGrowForm;
     private Coroutine deathRoutine;
     private bool deathPauseActive;
-    private SpriteRenderer[] spriteRenderers;
     private readonly Collider2D[] groundHits = new Collider2D[4];
     private readonly ContactPoint2D[] groundContacts = new ContactPoint2D[8];
     private readonly Collider2D[] resizeHits = new Collider2D[4];
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
     private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
-    private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
+    private MarioVisuals Visuals => marioVisuals ? marioVisuals : marioVisuals = GetComponent<MarioVisuals>();
     private Transform GroundCheck => groundCheck ? groundCheck : groundCheck = transform.Find("GroundCheck");
-    private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
-    private SpriteRenderer[] SpriteRenderers => spriteRenderers != null && spriteRenderers.Length > 0
-        ? spriteRenderers
-        : spriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
     private Camera SceneCamera => sceneCamera ? sceneCamera : sceneCamera = Camera.main;
     private CameraController SceneCameraController => SceneCamera ? SceneCamera.GetComponent<CameraController>() : null;
 
     public MarioForm Form => form;
     public bool IsSmall => form == MarioForm.Small;
-    public bool IsSuper => isSuper;
+    public bool IsSuper => superTimer > 0f;
+    public bool IsStarPowered => starPowerTimer > 0f;
+    public bool HasStarPower => IsStarPowered;
+    public bool IsDead => isDead;
+    public bool IsGrounded => isGrounded;
+    public bool IsDamageInvulnerable => damageInvulnerabilityTimer > 0f;
+    public bool IsInvincible => IsSuper || IsStarPowered || IsDamageInvulnerable;
+    public bool IsCrouching => isGrounded && moveInput.y < CrouchThreshold;
+    public Vector2 MoveInput => moveInput;
 
     private void Awake()
     {
-        stompContactGap.ClampAndOrder(-1f, 1f);
         form = (MarioForm)Mathf.Clamp((int)initialForm, (int)MarioForm.Small, (int)MarioForm.Fire);
         ApplySmallCollider();
-        if (form != MarioForm.Small)
-        {
-            pendingGrow = true;
-            pendingGrowForm = form;
-            form = MarioForm.Small;
-        }
+
+        if (form == MarioForm.Small) return;
+        pendingGrow = true;
+        pendingGrowForm = form;
+        form = MarioForm.Small;
     }
 
     private void OnEnable()
     {
-        stompContactGap.ClampAndOrder(-1f, 1f);
         UpdateJumpPhysics();
         Body.simulated = true;
         BodyCollider.enabled = true;
@@ -140,19 +133,8 @@ public class MarioController : MonoBehaviour
 
     private void OnDisable()
     {
-        if (deathPauseActive)
-        {
-            PauseService.Resume(GameplayPauseTypes);
-            deathPauseActive = false;
-        }
-
-        if (deathRoutine != null)
-        {
-            StopCoroutine(deathRoutine);
-            deathRoutine = null;
-        }
-
-        SetSpriteOpacity(1f);
+        StopDeathSequence();
+        Visuals?.ResetVisuals();
         PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, false);
         jumpAction.SetEnabled(false);
         moveAction.SetEnabled(false);
@@ -162,26 +144,11 @@ public class MarioController : MonoBehaviour
     {
         if (isDead) return;
 
-        if (PauseService.IsPaused(PauseType.Input))
-        {
-            moveInput = Vector2.zero;
-            jumpHeld = false;
-            jumpBufferTimer = 0f;
-        }
-        else
-            ReadInput();
-
-        isGrounded = CheckGrounded();
-        coyoteTimer = isGrounded ? coyoteTime : Mathf.Max(0f, coyoteTimer - Time.deltaTime);
-        damageInvulnerabilityTimer = Mathf.Max(0f, damageInvulnerabilityTimer - Time.deltaTime);
-        UpdateInvulnerabilityVisual();
-
-        var jumpPressed = !PauseService.IsPaused(PauseType.Input) && (jumpAction?.action?.WasPressedThisFrame() ?? false);
-        jumpBufferTimer = jumpPressed ? jumpBufferTime : Mathf.Max(0f, jumpBufferTimer - Time.deltaTime);
-
+        UpdateInputState();
+        UpdateGroundState();
+        UpdateTimers();
+        Visuals?.RefreshVisualState();
         TryStartJump();
-        UpdateSpriteDirection();
-        SyncAnimator();
     }
 
     private void FixedUpdate()
@@ -193,42 +160,10 @@ public class MarioController : MonoBehaviour
         ApplyJumpRelease();
     }
 
-    private void OnTriggerEnter2D(Collider2D collision)
-    {
-
-        if (!collision) return;
-        if (isDead) return;
-
-        var stompable = collision.GetComponentInParent<IStompable>();
-        if (stompable != null) return;
-        if (!IsEnemyCollider(collision)) return;
-        TakeDamage();
-
-//if mario interacts update UI
-
-
-        HandleEnemyTrigger(collision);
-
-    }
-
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
-        HandleEnemyCollision(collision);
-    }
-
-    private void OnTriggerStay2D(Collider2D collision)
-    {
-        HandleEnemyTrigger(collision);
-    }
-
-    private void OnCollisionStay2D(Collision2D collision)
-    {
-        HandleEnemyCollision(collision);
-    }
-
     public void TakeDamage()
     {
-        if (isDead || isSuper || damageInvulnerabilityTimer > 0f) return;
+        if (isDead || IsInvincible) return;
+
         if (IsSmall)
         {
             ResolveDeath();
@@ -261,131 +196,72 @@ public class MarioController : MonoBehaviour
             return;
         }
 
-        if (!grew && targetForm == MarioForm.Small) ApplySmallCollider();
+        if (!grew && targetForm == MarioForm.Small)
+            ApplySmallCollider();
 
         form = targetForm;
-        Anim.TrySetTrigger(grew ? "grow" : "shrink");
+        Visuals?.PlayFormTransition(grew);
     }
 
-    public void SetSuper(bool value) => isSuper = value;
-
-    private bool TryHandleEnemyContact(Collider2D collider, bool isStompContact)
+    public void ActivateSuper(float duration = -1f)
     {
-        if (!collider) return false;
-        if (isDead) return true;
-
-        var stompable = collider.GetComponentInParent<IStompable>();
-        var isEnemy = IsEnemyCollider(collider);
-        if (!isEnemy && stompable == null) return false;
-
-        if (TryStompEnemy(collider, isStompContact, stompable)) return true;
-
-        if (!isEnemy) return true;
-        TakeDamage();
-        return true;
+        var targetDuration = duration < 0f ? defaultSuperDuration : duration;
+        if (targetDuration <= 0f) return;
+        superTimer = Mathf.Max(superTimer, targetDuration);
     }
 
-    private bool TryStompEnemy(Collider2D enemyCollider, bool isStompContact, IStompable cachedStompable = null)
+    public void ActivateStarPower(float duration = -1f)
     {
-        if (!isStompContact) return false;
-
-        var stompable = cachedStompable ?? enemyCollider.GetComponentInParent<IStompable>();
-        if (stompable == null) return false;
-        if (!stompable.TryStomp(this, BodyCollider.bounds.center)) return false;
-
-        BounceFromStomp();
-        return true;
+        var targetDuration = duration < 0f ? defaultStarPowerDuration : duration;
+        if (targetDuration <= 0f) return;
+        starPowerTimer = Mathf.Max(starPowerTimer, targetDuration);
     }
 
-    private bool IsStompContact(Bounds enemyBounds)
-    {
-        var marioBounds = BodyCollider.bounds;
-        var horizontalOverlap = Mathf.Min(marioBounds.max.x, enemyBounds.max.x) - Mathf.Max(marioBounds.min.x, enemyBounds.min.x);
-        if (horizontalOverlap < -stompSideTolerance) return false;
-
-        var feetGap = marioBounds.min.y - enemyBounds.max.y;
-        if (feetGap < stompContactGap.min) return false;
-        if (feetGap > stompContactGap.max) return false;
-
-        if (marioBounds.min.y <= enemyBounds.min.y) return false;
-
-        return true;
-    }
-
-    private void HandleEnemyCollision(Collision2D collision)
-    {
-        if (isDead) return;
-        var enemyCollider = ResolveEnemyCollider(collision);
-        if (!enemyCollider) return;
-        var isStompContact = IsStompCollision(collision, enemyCollider.bounds);
-        TryHandleEnemyContact(enemyCollider, isStompContact);
-    }
-
-    private void HandleEnemyTrigger(Collider2D collision)
-    {
-        if (!collision || isDead) return;
-        if (IsOwnCollider(collision)) return;
-
-        var isStompContact = Body.linearVelocity.y <= stompMaxUpwardVelocity && IsStompContact(collision.bounds);
-        TryHandleEnemyContact(collision, isStompContact);
-    }
-
-    private Collider2D ResolveEnemyCollider(Collision2D collision)
-    {
-        var primary = collision.collider;
-        if (primary && !IsOwnCollider(primary)) return primary;
-
-        var secondary = collision.otherCollider;
-        if (secondary && !IsOwnCollider(secondary)) return secondary;
-
-        return null;
-    }
-
-    private bool IsStompCollision(Collision2D collision, Bounds enemyBounds)
-    {
-        if (Body.linearVelocity.y > stompMaxUpwardVelocity) return false;
-        if (BodyCollider.bounds.center.y <= enemyBounds.center.y + 0.01f) return false;
-        if (HasFeetContact(collision, enemyBounds)) return true;
-        return IsStompContact(enemyBounds);
-    }
-
-    private bool HasFeetContact(Collision2D collision, Bounds enemyBounds)
-    {
-        var marioBounds = BodyCollider.bounds;
-        var marioFeetY = marioBounds.min.y + stompContactPointTolerance;
-        var minContactX = enemyBounds.min.x - stompSideTolerance;
-        var maxContactX = enemyBounds.max.x + stompSideTolerance;
-        var minContactY = enemyBounds.center.y - stompContactPointTolerance;
-        var count = collision.contactCount;
-        for (var i = 0; i < count; i++)
-        {
-            var point = collision.GetContact(i).point;
-            if (point.y <= marioFeetY && point.y >= minContactY && point.x >= minContactX && point.x <= maxContactX)
-                return true;
-        }
-
-        return false;
-    }
-
-    private void BounceFromStomp()
+    public void ApplyEnemyStompBounce(float bounceSpeed)
     {
         var velocity = Body.linearVelocity;
-        velocity.y = Mathf.Max(stompBounceSpeed, velocity.y);
+        velocity.y = Mathf.Max(bounceSpeed, velocity.y);
         Body.linearVelocity = velocity;
         coyoteTimer = 0f;
         jumpBufferTimer = 0f;
     }
 
-    private void ReadInput()
+    private void UpdateInputState()
     {
+        var inputPaused = PauseService.IsPaused(PauseType.Input);
+        if (inputPaused)
+        {
+            moveInput = Vector2.zero;
+            jumpHeld = false;
+            jumpBufferTimer = 0f;
+            return;
+        }
+
         moveInput = moveAction?.action?.ReadValue<Vector2>() ?? Vector2.zero;
         jumpHeld = jumpAction?.action?.IsPressed() ?? false;
+
+        var jumpPressed = jumpAction?.action?.WasPressedThisFrame() ?? false;
+        jumpBufferTimer = jumpPressed ? jumpBufferTime : Mathf.Max(0f, jumpBufferTimer - Time.deltaTime);
+    }
+
+    private void UpdateGroundState()
+    {
+        isGrounded = CheckGrounded();
+        coyoteTimer = isGrounded ? coyoteTime : Mathf.Max(0f, coyoteTimer - Time.deltaTime);
+    }
+
+    private void UpdateTimers()
+    {
+        damageInvulnerabilityTimer = Mathf.Max(0f, damageInvulnerabilityTimer - Time.deltaTime);
+        if (PauseService.IsPaused(PauseType.Physics)) return;
+
+        superTimer = Mathf.Max(0f, superTimer - Time.deltaTime);
+        starPowerTimer = Mathf.Max(0f, starPowerTimer - Time.deltaTime);
     }
 
     private void TryStartJump()
     {
-        if (jumpBufferTimer <= 0f) return;
-        if (coyoteTimer <= 0f) return;
+        if (jumpBufferTimer <= 0f || coyoteTimer <= 0f) return;
 
         jumpBufferTimer = 0f;
         coyoteTimer = 0f;
@@ -453,39 +329,12 @@ public class MarioController : MonoBehaviour
         var filter = new ContactFilter2D { useTriggers = false };
         var hitCount = Physics2D.OverlapBox(probeCenter, groundCheckSize, 0f, filter, groundHits);
         for (var i = 0; i < hitCount; i++)
+        {
             if (groundHits[i] && !groundHits[i].isTrigger && !IsOwnCollider(groundHits[i]))
                 return true;
+        }
 
         return false;
-    }
-
-    private bool IsCrouching => isGrounded && moveInput.y < CrouchThreshold;
-
-    private void SyncAnimator()
-    {
-        var velocity = Body.linearVelocity;
-        var inputX = IsCrouching ? 0f : moveInput.x;
-        if (Mathf.Abs(inputX) < InputDeadzone) inputX = 0f;
-
-        var absVelocityX = Mathf.Abs(velocity.x);
-        if (Mathf.Abs(inputX) > InputDeadzone) absVelocityX = Mathf.Max(absVelocityX, MinAnimMoveSpeed);
-
-        Anim.TrySet("absVelocityX", absVelocityX);
-        Anim.TrySet("velocityX", velocity.x);
-        Anim.TrySet("inputX", inputX);
-        Anim.TrySet("velocityY", velocity.y);
-        Anim.TrySet("isGrounded", isGrounded);
-        Anim.TrySet("isCrouching", IsCrouching);
-        Anim.TrySet("isSkidding", IsSkidding(inputX, velocity.x));
-        Anim.TrySet("form", (float)form);
-    }
-
-    private void UpdateSpriteDirection()
-    {
-        if (!Flipper) return;
-        if (!isGrounded) return;
-        if (Mathf.Abs(moveInput.x) <= InputDeadzone) return;
-        Flipper.SetDirection(new Vector2(moveInput.x, 0f));
     }
 
     private void ResolveDeath()
@@ -494,17 +343,34 @@ public class MarioController : MonoBehaviour
 
         isDead = true;
         pendingGrow = false;
-        SetSpriteOpacity(1f);
-        Anim.TrySetTrigger("die");
-        PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, true);
+        damageInvulnerabilityTimer = 0f;
+        superTimer = 0f;
+        starPowerTimer = 0f;
 
         moveInput = Vector2.zero;
         jumpHeld = false;
         jumpBufferTimer = 0f;
         coyoteTimer = 0f;
 
+        Visuals?.ResetVisuals();
+        Visuals?.PlayDeath();
+        PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, true);
+
         if (deathRoutine != null) StopCoroutine(deathRoutine);
         deathRoutine = StartCoroutine(DeathSequence());
+    }
+
+    private void StopDeathSequence()
+    {
+        if (deathPauseActive)
+        {
+            PauseService.Resume(GameplayPauseTypes);
+            deathPauseActive = false;
+        }
+
+        if (deathRoutine == null) return;
+        StopCoroutine(deathRoutine);
+        deathRoutine = null;
     }
 
     private void OnDrawGizmosSelected()
@@ -528,7 +394,6 @@ public class MarioController : MonoBehaviour
 
         var worldGravity = Mathf.Abs(Physics2D.gravity.y);
         if (worldGravity <= 0.0001f) return;
-
         Body.gravityScale = gravity / worldGravity;
     }
 
@@ -539,7 +404,7 @@ public class MarioController : MonoBehaviour
 
         pendingGrow = false;
         form = pendingGrowForm;
-        Anim.TrySetTrigger("grow");
+        Visuals?.PlayFormTransition(true);
     }
 
     private bool TryApplyBigCollider()
@@ -548,8 +413,10 @@ public class MarioController : MonoBehaviour
         var center = (Vector2)transform.position + bigColliderOffset;
         var hitCount = Physics2D.OverlapBox(center, bigColliderSize, 0f, filter, resizeHits);
         for (var i = 0; i < hitCount; i++)
+        {
             if (resizeHits[i] && !resizeHits[i].isTrigger && !IsOwnCollider(resizeHits[i]))
                 return false;
+        }
 
         SetBodyCollider(bigColliderSize, bigColliderOffset);
         return true;
@@ -566,57 +433,15 @@ public class MarioController : MonoBehaviour
         BodyCollider.offset = offset;
     }
 
-    private static bool IsSkidding(float inputX, float velocityX)
-    {
-        if (Mathf.Abs(inputX) <= InputDeadzone) return false;
-        if (Mathf.Abs(velocityX) <= InputDeadzone) return false;
-        return Mathf.Sign(inputX) != Mathf.Sign(velocityX);
-    }
-
     private bool IsOwnCollider(Collider2D collider)
     {
         return collider && collider == BodyCollider;
     }
 
-    private static bool IsEnemyCollider(Collider2D collider)
-    {
-        return collider.CompareColliderTag("enemy");
-    }
-
-    private void UpdateInvulnerabilityVisual()
-    {
-        if (damageInvulnerabilityTimer <= 0f)
-        {
-            SetSpriteOpacity(1f);
-            return;
-        }
-
-        var pulse = Mathf.PingPong(Time.time * invulnerabilityFlickerSpeed, 1f);
-        var alpha = Mathf.Lerp(invulnerabilityMinAlpha, 1f, pulse);
-        SetSpriteOpacity(alpha);
-    }
-
-    private void SetSpriteOpacity(float alpha)
-    {
-        var renderers = SpriteRenderers;
-        for (var i = 0; i < renderers.Length; i++)
-        {
-            var renderer = renderers[i];
-            if (!renderer) continue;
-            var color = renderer.color;
-            color.a = alpha;
-            renderer.color = color;
-        }
-    }
-
-    private void OnValidate()
-    {
-        stompContactGap.ClampAndOrder(-1f, 1f);
-    }
-
     private IEnumerator DeathSequence()
     {
-        GameData.Instance.lives--;
+        var gameData = ResolveGameData();
+        if (gameData) gameData.LoseLife();
 
         Body.linearVelocity = Vector2.zero;
         Body.angularVelocity = 0f;
@@ -652,7 +477,7 @@ public class MarioController : MonoBehaviour
         }
 
         deathRoutine = null;
-        if (GameData.Instance.lives <= 0)
+        if (gameData && gameData.lives <= 0)
         {
             SceneManager.LoadScene("GameOver");
             yield break;
@@ -668,9 +493,13 @@ public class MarioController : MonoBehaviour
         if (!sceneCamera || !sceneCamera.orthographic) return fallbackCutoffY;
         return sceneCamera.transform.position.y - sceneCamera.orthographicSize - deathOffscreenBuffer;
     }
-    //When mario jumps, the event gets called. Mario Audio hears this.
-    
-    //Jump
-    //Crouch
-    //Throw
+
+    private static GameData ResolveGameData()
+    {
+        if (GameData.Instance) return GameData.Instance;
+
+        var found = FindFirstObjectByType<GameData>(FindObjectsInactive.Include);
+        if (found && !GameData.Instance) GameData.Instance = found;
+        return found;
+    }
 }

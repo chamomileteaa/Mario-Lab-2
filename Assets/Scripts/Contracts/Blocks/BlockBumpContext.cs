@@ -15,8 +15,3 @@ public readonly struct BlockBumpContext
         Direction = direction;
     }
 }
-
-public interface IBlockBumpReactive
-{
-    void OnBlockBumped(BlockBumpContext context);
-}
