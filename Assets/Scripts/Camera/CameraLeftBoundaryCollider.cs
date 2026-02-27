@@ -5,12 +5,13 @@ using UnityEngine;
 [RequireComponent(typeof(BoxCollider2D))]
 public class CameraLeftBoundaryCollider : MonoBehaviour
 {
+    private const string PlayerLayerName = "Player";
+
     [SerializeField] private Camera trackedCamera;
     [SerializeField, Min(0.01f)] private float wallThickness = 0.2f;
     [SerializeField, Min(0f)] private float extraHeight = 100f;
     [SerializeField] private float wallEdgeOffset;
     [SerializeField] private bool followCameraY = true;
-    [SerializeField] private bool marioOnlyCollision = true;
 
     private Rigidbody2D body2D;
     private BoxCollider2D boxCollider2D;
@@ -35,6 +36,7 @@ public class CameraLeftBoundaryCollider : MonoBehaviour
     private void Awake()
     {
         SetupComponents();
+        ConfigureCollisionMatrix();
         initialY = transform.position.y;
         SyncToCamera();
     }
@@ -47,16 +49,6 @@ public class CameraLeftBoundaryCollider : MonoBehaviour
     private void LateUpdate()
     {
         SyncToCamera();
-    }
-
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
-        IgnoreIfNotMario(collision);
-    }
-
-    private void OnCollisionStay2D(Collision2D collision)
-    {
-        IgnoreIfNotMario(collision);
     }
 
     private void SetupComponents()
@@ -72,6 +64,19 @@ public class CameraLeftBoundaryCollider : MonoBehaviour
         collider2D.isTrigger = false;
         collider2D.size = new Vector2(Mathf.Max(0.01f, wallThickness), Mathf.Max(1f, collider2D.size.y));
         collider2D.offset = Vector2.zero;
+    }
+
+    private void ConfigureCollisionMatrix()
+    {
+        var playerLayer = LayerMask.NameToLayer(PlayerLayerName);
+        if (playerLayer < 0) return;
+
+        var boundaryLayer = gameObject.layer;
+        for (var layer = 0; layer < 32; layer++)
+        {
+            var collide = layer == playerLayer;
+            Physics2D.IgnoreLayerCollision(boundaryLayer, layer, !collide);
+        }
     }
 
     private void SyncToCamera()
@@ -92,27 +97,5 @@ public class CameraLeftBoundaryCollider : MonoBehaviour
         var targetY = followCameraY ? sceneCamera.transform.position.y : initialY;
 
         Body.position = new Vector2(targetX, targetY);
-    }
-
-    private void IgnoreIfNotMario(Collision2D collision)
-    {
-        if (!marioOnlyCollision) return;
-        if (!collision.otherCollider) return;
-        if (collision.otherCollider.CompareColliderTag("Player")) return;
-
-        var otherBody = collision.otherCollider.attachedRigidbody;
-        if (!otherBody)
-        {
-            Physics2D.IgnoreCollision(Box, collision.otherCollider, true);
-            return;
-        }
-
-        var otherColliders = otherBody.GetComponents<Collider2D>();
-        for (var i = 0; i < otherColliders.Length; i++)
-        {
-            var otherCollider = otherColliders[i];
-            if (!otherCollider) continue;
-            Physics2D.IgnoreCollision(Box, otherCollider, true);
-        }
     }
 }

@@ -21,6 +21,7 @@ public class MarioCollisionHandler : MonoBehaviour
     private const string FireFlowerToken = "fireflower";
     private const string StarmanToken = "starman";
     private const string InvincibilityStarToken = "invincibility star";
+    private const string CoinToken = "coin";
 
     [Header("Collectibles")]
     [SerializeField] private UIScript ui;
@@ -220,7 +221,7 @@ public class MarioCollisionHandler : MonoBehaviour
         if (normalizedName.Contains(SuperMushroomToken) || normalizedName.Contains(RedMushroomToken)) return CollectibleType.RedMushroom;
         if (normalizedName.Contains(FireFlowerToken)) return CollectibleType.FireFlower;
         if (normalizedName.Contains(InvincibilityStarToken) || normalizedName.Contains(StarmanToken)) return CollectibleType.Starman;
-        if (normalizedName.Contains("coin")) return CollectibleType.Coin;
+        if (normalizedName.Contains(CoinToken)) return CollectibleType.Coin;
         return CollectibleType.None;
     }
 
