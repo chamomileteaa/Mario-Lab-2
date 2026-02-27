@@ -10,6 +10,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
 {
     private const string PlayerTag = "Player";
     private const string CameraBoundaryLayerName = "CameraBoundary";
+    private const float HorizontalContactThreshold = 0.2f;
     private static int cameraBoundaryLayer = int.MinValue;
 
     [Flags]
@@ -44,7 +45,6 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
     [SerializeField] private SpawnFacingMode spawnFacingMode = SpawnFacingMode.Towards;
     [SerializeField] private TurnMatrix turnRules = TurnMatrix.Walls | TurnMatrix.Entities | TurnMatrix.Player;
     [SerializeField, Min(0f)] private float turnCooldown = 0.1f;
-    [SerializeField, Min(0.01f)] private float wallCheckDistance = 0.06f;
     [SerializeField] private bool useContinuousCollisionDetection = true;
 
     [Header("Block Bump")]
@@ -69,7 +69,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
     private bool knockedAway;
     private float nextTurnTime;
     private float initialGravityScale;
-    private readonly RaycastHit2D[] aheadHits = new RaycastHit2D[8];
+    private readonly ContactPoint2D[] contactPoints = new ContactPoint2D[8];
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
     private BoxCollider2D MainCollider => mainCollider2D ? mainCollider2D : mainCollider2D = GetComponent<BoxCollider2D>();
@@ -132,17 +132,8 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
         if (knockedAway) return;
         if (Time.time < nextTurnTime) return;
 
-        if (ShouldTurnFromAheadProbe())
+        if (ShouldTurnFromSideContacts())
             ReverseDirection();
-    }
-
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
-        if (knockedAway) return;
-        if (Time.time < nextTurnTime) return;
-        if (!HasHorizontalContact(collision)) return;
-        if (!ShouldTurnFromCollider(collision.collider)) return;
-        ReverseDirection();
     }
 
     public void SetMovementEnabled(bool enabled)
@@ -245,23 +236,18 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
         Body.linearVelocity = velocity;
     }
 
-    private bool ShouldTurnFromAheadProbe()
+    private bool ShouldTurnFromSideContacts()
     {
-        if (!MainCollider) return false;
         if ((turnRules & (TurnMatrix.Walls | TurnMatrix.Entities | TurnMatrix.Player)) == 0) return false;
 
-        var probeDistance = wallCheckDistance + Mathf.Abs(Body.linearVelocity.x) * Time.fixedDeltaTime;
-        if (probeDistance <= 0f) return false;
-
-        var filter = new ContactFilter2D { useTriggers = false };
-        var hitCount = MainCollider.Cast(new Vector2(moveDirectionX, 0f), filter, aheadHits, probeDistance);
-        for (var i = 0; i < hitCount; i++)
+        var contactCount = Body.GetContacts(contactPoints);
+        for (var i = 0; i < contactCount; i++)
         {
-            var hit = aheadHits[i];
-            if (Mathf.Abs(hit.normal.x) < 0.2f) continue;
-
-            var hitCollider = hit.collider;
-            if (ShouldTurnFromCollider(hitCollider)) return true;
+            var contact = contactPoints[i];
+            var collider = contact.collider;
+            if (!ShouldTurnFromCollider(collider)) continue;
+            if (Mathf.Abs(contact.normal.x) < HorizontalContactThreshold) continue;
+            if (contact.normal.x * moveDirectionX < 0f) return true;
         }
 
         return false;
@@ -271,6 +257,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
     {
         if (!collider) return false;
         if (IsOwnCollider(collider)) return false;
+        if (!CanCollideWith(collider)) return false;
         if (collider.CompareColliderTag(PlayerTag))
             return (turnRules & TurnMatrix.Player) != 0;
         if (IsCameraBoundaryLayer(collider)) return (turnRules & TurnMatrix.Walls) != 0;
@@ -279,19 +266,6 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
             return (turnRules & TurnMatrix.Entities) != 0;
 
         return (turnRules & TurnMatrix.Walls) != 0;
-    }
-
-    private static bool HasHorizontalContact(Collision2D collision)
-    {
-        var contactCount = collision.contactCount;
-        for (var i = 0; i < contactCount; i++)
-        {
-            var normal = collision.GetContact(i).normal;
-            if (Mathf.Abs(normal.x) > 0.2f)
-                return true;
-        }
-
-        return false;
     }
 
     private static bool IsCameraBoundaryLayer(Collider2D collider)
@@ -307,6 +281,20 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
         if (!collider) return false;
         if (!collider.TryGetComponentInParent(out other)) return false;
         return other && other != this;
+    }
+
+    private bool CanCollideWith(Collider2D collider)
+    {
+        if (!collider) return false;
+        var otherLayer = ResolveCollisionLayer(collider);
+        return otherLayer >= 0 && !Physics2D.GetIgnoreLayerCollision(gameObject.layer, otherLayer);
+    }
+
+    private static int ResolveCollisionLayer(Collider2D collider)
+    {
+        if (!collider) return -1;
+        if (collider.attachedRigidbody) return collider.attachedRigidbody.gameObject.layer;
+        return collider.gameObject.layer;
     }
 
     private bool IsOwnCollider(Collider2D collider)
