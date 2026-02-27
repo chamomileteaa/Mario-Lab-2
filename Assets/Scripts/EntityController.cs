@@ -46,12 +46,14 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
     [Header("Defeat")]
     [SerializeField] private bool allowKnockbackHit = true;
     [SerializeField] private bool allowStarHit = true;
+    [SerializeField] private bool stopAnimatorWhenKnockedBack = true;
 
     private Rigidbody2D body2D;
     private BoxCollider2D mainCollider2D;
     private Collider2D[] ownColliders;
     private readonly HashSet<int> ownColliderIds = new HashSet<int>(8);
     private SpriteFlipper spriteFlipper;
+    private Animator animatorComponent;
     private bool movementEnabled;
     private bool startedMovement;
     private bool knockedAway;
@@ -65,6 +67,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
         ? ownColliders
         : ownColliders = GetComponentsInChildren<Collider2D>(true);
     private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponent<SpriteFlipper>();
+    private Animator Anim => animatorComponent ? animatorComponent : animatorComponent = GetComponent<Animator>();
 
     public event Action<EntityController> KnockbackApplied;
     public event Action<EntityController, EnemyImpactType> KnockbackAppliedWithType;
@@ -99,6 +102,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
         RebuildOwnColliderIds();
         SetCollidersEnabled(true);
         Body.WakeUp();
+        ResumeAnimatorIfNeeded();
         UpdateFacing(1f);
     }
 
@@ -218,6 +222,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
         nextTurnTime = Time.time + turnCooldown;
         KnockbackApplied?.Invoke(this);
         KnockbackAppliedWithType?.Invoke(this, impactType);
+        StopAnimatorIfNeeded();
         return true;
     }
 
@@ -352,5 +357,18 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
             if (!collider) continue;
             collider.enabled = enabled;
         }
+    }
+
+    private void StopAnimatorIfNeeded()
+    {
+        if (!stopAnimatorWhenKnockedBack) return;
+        if (!Anim) return;
+        Anim.speed = 0f;
+    }
+
+    private void ResumeAnimatorIfNeeded()
+    {
+        if (!Anim) return;
+        Anim.speed = 1f;
     }
 }

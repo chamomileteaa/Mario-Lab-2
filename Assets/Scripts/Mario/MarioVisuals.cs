@@ -6,6 +6,11 @@ using UnityEngine;
 [RequireComponent(typeof(AnimatorCache))]
 public class MarioVisuals : MonoBehaviour
 {
+    private const string StarShaderName = "Custom/SpritePaletteStar";
+
+    private const float NesFrameRate = 60f;
+    private const int StarPaletteMask = 0x03;
+
     private const float InputDeadzone = 0.01f;
     private const float MinAnimMoveSpeed = 0.2f;
     private const string GrowTrigger = "grow";
@@ -19,23 +24,21 @@ public class MarioVisuals : MonoBehaviour
     private const string IsCrouchingParameter = "isCrouching";
     private const string IsSkiddingParameter = "isSkidding";
     private const string FormParameter = "form";
+    private static readonly int StarEnabledId = Shader.PropertyToID("_StarEnabled");
+    private static readonly int PaletteIndexId = Shader.PropertyToID("_PaletteIndex");
 
     [Header("Damage Flicker")]
     [SerializeField, Range(0.05f, 1f)] private float invulnerabilityMinAlpha = 0.35f;
     [SerializeField, Min(1f)] private float invulnerabilityFlickerSpeed = 18f;
 
-    [Header("Star Color Cycle")]
-    [SerializeField, Min(0.1f)] private float starColorCycleSpeed = 20f;
-    [SerializeField] private Color[] starColors =
-    {
-        Color.yellow,
-        Color.cyan,
-        Color.magenta,
-        Color.green
-    };
+    [Header("Star Shader")]
+    [SerializeField] private bool useStarPaletteShader = true;
+    [SerializeField] private Shader starPaletteShader;
 
-    [Header("Super Tint")]
-    [SerializeField] private Color superTint = new Color(1f, 0.95f, 0.65f, 1f);
+    [Header("Star Palette Cycle")]
+    [SerializeField, Min(0f)] private float starSlowPhaseSeconds = 2.25f;
+    [SerializeField, Min(1)] private int starFastFramesPerStep = 4;
+    [SerializeField, Min(1)] private int starSlowFramesPerStep = 8;
 
     private MarioController marioController;
     private Rigidbody2D body2D;
@@ -43,6 +46,10 @@ public class MarioVisuals : MonoBehaviour
     private SpriteFlipper spriteFlipper;
     private SpriteRenderer[] spriteRenderers;
     private Color[] spriteBaseColors;
+    private Material starPaletteMaterial;
+    private Material[] originalSpriteMaterials;
+    private bool starPaletteApplied;
+    private int lastAppliedStarPaletteIndex = -1;
 
     private MarioController Mario => marioController ? marioController : marioController = GetComponent<MarioController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
@@ -72,7 +79,20 @@ public class MarioVisuals : MonoBehaviour
 
     public void ResetVisuals()
     {
-        ApplySpriteVisuals(1f, null);
+        DisableStarPaletteShader();
+        ApplySpriteVisuals(1f);
+    }
+
+    private void OnDisable()
+    {
+        DisableStarPaletteShader();
+    }
+
+    private void OnDestroy()
+    {
+        if (starPaletteMaterial)
+            Destroy(starPaletteMaterial);
+        starPaletteMaterial = null;
     }
 
     private void SyncAnimator()
@@ -111,31 +131,119 @@ public class MarioVisuals : MonoBehaviour
             alpha = Mathf.Lerp(invulnerabilityMinAlpha, 1f, pulse);
         }
 
-        Color? tint = null;
-        if (Mario.IsStarPowered)
-            tint = EvaluateStarTint();
-        else if (Mario.IsSuper)
-            tint = superTint;
-        ApplySpriteVisuals(alpha, tint);
+        var usedStarShader = Mario.IsStarPowered && TryApplyStarPaletteShader();
+        if (!usedStarShader) 
+            DisableStarPaletteShader();
+
+        ApplySpriteVisuals(alpha);
     }
 
-    private Color EvaluateStarTint()
+    private bool TryApplyStarPaletteShader()
     {
-        if (starColors == null || starColors.Length == 0) return Color.white;
-        if (starColors.Length == 1) return starColors[0];
+        if (!useStarPaletteShader) return false;
 
-        var cycle = Mathf.Repeat(Time.time * Mathf.Max(0.1f, starColorCycleSpeed), starColors.Length);
-        var fromIndex = Mathf.FloorToInt(cycle);
-        var toIndex = (fromIndex + 1) % starColors.Length;
-        var t = cycle - fromIndex;
-        return Color.Lerp(starColors[fromIndex], starColors[toIndex], t);
+        var shader = ResolveStarShader();
+        if (!shader) return false;
+
+        var material = GetOrCreateStarMaterial(shader);
+        if (!material) return false;
+
+        var renderers = SpriteRenderers;
+        if (renderers == null || renderers.Length == 0) return false;
+
+        if (!starPaletteApplied)
+        {
+            ApplyStarMaterial(renderers, material);
+            material.SetFloat(StarEnabledId, 1f);
+            lastAppliedStarPaletteIndex = -1;
+        }
+
+        var paletteIndex = EvaluateStarPaletteIndex();
+        if (paletteIndex != lastAppliedStarPaletteIndex)
+        {
+            material.SetFloat(PaletteIndexId, paletteIndex);
+            lastAppliedStarPaletteIndex = paletteIndex;
+        }
+
+        return true;
     }
 
-    private void ApplySpriteVisuals(float alpha, Color? tint)
+    private void ApplyStarMaterial(SpriteRenderer[] renderers, Material material)
+    {
+        if (!starPaletteApplied || originalSpriteMaterials == null || originalSpriteMaterials.Length != renderers.Length)
+        {
+            originalSpriteMaterials = new Material[renderers.Length];
+            for (var i = 0; i < renderers.Length; i++)
+            {
+                var renderer = renderers[i];
+                if (!renderer) continue;
+                originalSpriteMaterials[i] = renderer.sharedMaterial;
+            }
+        }
+
+        for (var i = 0; i < renderers.Length; i++)
+        {
+            var renderer = renderers[i];
+            if (!renderer) continue;
+            if (renderer.sharedMaterial != material)
+                renderer.sharedMaterial = material;
+        }
+
+        starPaletteApplied = true;
+    }
+
+    private void DisableStarPaletteShader()
+    {
+        if (!starPaletteApplied) return;
+
+        if (starPaletteMaterial)
+            starPaletteMaterial.SetFloat(StarEnabledId, 0f);
+
+        var renderers = SpriteRenderers;
+        for (var i = 0; i < renderers.Length; i++)
+        {
+            var renderer = renderers[i];
+            if (!renderer) continue;
+            if (originalSpriteMaterials != null && i < originalSpriteMaterials.Length)
+                renderer.sharedMaterial = originalSpriteMaterials[i];
+        }
+
+        starPaletteApplied = false;
+        lastAppliedStarPaletteIndex = -1;
+    }
+
+    private Shader ResolveStarShader()
+    {
+        if (starPaletteShader) return starPaletteShader;
+        starPaletteShader = Shader.Find(StarShaderName);
+        return starPaletteShader;
+    }
+
+    private Material GetOrCreateStarMaterial(Shader shader)
+    {
+        if (starPaletteMaterial && starPaletteMaterial.shader == shader) return starPaletteMaterial;
+        if (starPaletteMaterial) Destroy(starPaletteMaterial);
+
+        starPaletteMaterial = new Material(shader)
+        {
+            name = "Mario_StarPalette_Runtime"
+        };
+        starPaletteMaterial.hideFlags = HideFlags.DontSave;
+        return starPaletteMaterial;
+    }
+
+    private int EvaluateStarPaletteIndex()
+    {
+        var nesFrame = Mathf.FloorToInt(Time.time * NesFrameRate);
+        var useSlowCycle = Mario.StarPowerTimeRemaining <= starSlowPhaseSeconds;
+        var framesPerStep = Mathf.Max(1, useSlowCycle ? starSlowFramesPerStep : starFastFramesPerStep);
+        return (nesFrame / framesPerStep) & StarPaletteMask;
+    }
+
+    private void ApplySpriteVisuals(float alpha)
     {
         var renderers = SpriteRenderers;
         EnsureSpriteBaseColors(renderers);
-        var tintColor = tint ?? Color.white;
 
         for (var i = 0; i < renderers.Length; i++)
         {
@@ -144,9 +252,6 @@ public class MarioVisuals : MonoBehaviour
 
             var baseColor = spriteBaseColors[i];
             var color = baseColor;
-            color.r *= tintColor.r;
-            color.g *= tintColor.g;
-            color.b *= tintColor.b;
             color.a = baseColor.a * alpha;
             renderer.color = color;
         }
