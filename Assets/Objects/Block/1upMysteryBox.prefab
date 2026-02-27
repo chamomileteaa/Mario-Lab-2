@@ -18,8 +18,12 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3962262345731032707, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
       propertyPath: m_Name
-      value: StarmanMysteryBox 1
+      value: 1upMysteryBox
       objectReference: {fileID: 0}
+    - target: {fileID: 4213723704945643201, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 383366853, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}
     - target: {fileID: 4262193074098930621, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
       propertyPath: kind
       value: 1

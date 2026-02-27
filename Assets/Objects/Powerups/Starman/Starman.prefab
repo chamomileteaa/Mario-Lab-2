@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5681072358119236686}
   - component: {fileID: 5648667863462141606}
   m_Layer: 0
-  m_Name: SuperStar_00
+  m_Name: Sprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -100,12 +100,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9184012362762432823}
+  - component: {fileID: 6637704131947648436}
+  - component: {fileID: 365936543240998767}
   - component: {fileID: 3090384514205353397}
   - component: {fileID: 3361520778603065821}
   - component: {fileID: 916519357198779453}
-  - component: {fileID: 223801643824629594}
-  - component: {fileID: 6637704131947648436}
-  - component: {fileID: 365936543240998767}
   m_Layer: 8
   m_Name: Starman
   m_TagString: Starman
@@ -129,6 +128,56 @@ Transform:
   - {fileID: 5681072358119236686}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6637704131947648436
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8951179429720929814}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c1fa0f3c26c4df59a1223e4f3b8a811, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EntityController
+  moveSpeed: 1.5
+  acceleration: 40
+  moveDirectionX: -1
+  moveOnEnable: 1
+  startWhenVisible: 1
+  faceMarioOnSpawn: 1
+  turnRules: 3
+  turnCooldown: 0.1
+  wallCheckDistance: 0.06
+  useContinuousCollisionDetection: 1
+  blockBumpReaction: 1
+  bumpUpwardSpeed: 3.25
+  knockAwayHorizontalSpeed: 2
+  knockAwayGravityScale: 1
+  allowKnockbackHit: 1
+  allowStarHit: 1
+  stopAnimatorWhenKnockedBack: 1
+--- !u!114 &365936543240998767
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8951179429720929814}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6321b826b85549349972b39e53ede82f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFlipper
+  targets:
+  - {fileID: 5648667863462141606}
+  referenceCollider: {fileID: 3361520778603065821}
+  useLocalScale: 1
+  flipX: 1
+  flipY: 1
+  deadzone: 0.01
+  hasReferenceCollider: 1
+  fallbackFlipOffset: {x: 0, y: 0}
 --- !u!95 &3090384514205353397
 Animator:
   serializedVersion: 7
@@ -185,7 +234,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: -0.0012853146, y: 0}
+  m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -195,7 +244,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.8997512, y: 1}
+  m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
 --- !u!50 &916519357198779453
 Rigidbody2D:
@@ -212,7 +261,7 @@ Rigidbody2D:
   m_Mass: 1
   m_LinearDamping: 0
   m_AngularDamping: 0.05
-  m_GravityScale: 4.212265
+  m_GravityScale: 4
   m_Material: {fileID: 6200000, guid: b16dc7e0c1a70494dbd20ea2f0b6d2ed, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
@@ -224,88 +273,3 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4
---- !u!58 &223801643824629594
-CircleCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8951179429720929814}
-  m_Enabled: 0
-  serializedVersion: 3
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_CompositeOperation: 0
-  m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0}
-  m_Radius: 0.48
---- !u!114 &6637704131947648436
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8951179429720929814}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7c1fa0f3c26c4df59a1223e4f3b8a811, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EntityController
-  moveSpeed: 1.5
-  acceleration: 40
-  moveDirectionX: -1
-  moveOnEnable: 1
-  startWhenVisible: 1
-  faceMarioOnSpawn: 1
-  turnRules: 3
-  turnCooldown: 0.1
-  wallCheckDistance: 0.06
-  useContinuousCollisionDetection: 1
-  blockBumpReaction: 1
-  bumpUpwardSpeed: 3.25
-  knockAwayHorizontalSpeed: 2
-  knockAwayGravityScale: 1
-  allowKnockbackHit: 1
-  allowStarHit: 1
---- !u!114 &365936543240998767
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8951179429720929814}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6321b826b85549349972b39e53ede82f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SpriteFlipper
-  targets:
-  - {fileID: 5648667863462141606}
-  referenceCollider: {fileID: 3361520778603065821}
-  useLocalScale: 1
-  flipX: 1
-  flipY: 1
-  deadzone: 0.01
-  hasReferenceCollider: 1
-  fallbackFlipOffset: {x: 0, y: 0}

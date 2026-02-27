@@ -14,7 +14,7 @@ PrefabInstance:
       objectReference: {fileID: 6738218706411903907, guid: fc4890d02bb8a0346b85cab08dfd6ca2, type: 3}
     - target: {fileID: 1829048895021128474, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
       propertyPath: m_Color.a
-      value: 0.00000033116353
+      value: 0.8
       objectReference: {fileID: 0}
     - target: {fileID: 1829048895021128474, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
       propertyPath: m_Enabled
@@ -25,8 +25,12 @@ PrefabInstance:
       value: Hidden1upMysteryBox
       objectReference: {fileID: 0}
     - target: {fileID: 4213723704945643201, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 383366853, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}
+    - target: {fileID: 4213723704945643201, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
       propertyPath: m_Color.a
-      value: 0.0000004139544
+      value: 0.35
       objectReference: {fileID: 0}
     - target: {fileID: 4262193074098930621, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
       propertyPath: kind
