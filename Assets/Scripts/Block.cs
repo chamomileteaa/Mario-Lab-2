@@ -68,12 +68,12 @@ public class Block : MonoBehaviour
     private SpriteRenderer overlayContent;
     [SerializeField, Min(0f), FormerlySerializedAs("overlayY"), FormerlySerializedAs("contentOverlayHeight")]
     private float overlayContentY = 0.6f;
-    [SerializeField, Range(0f, 1f), FormerlySerializedAs("overlayAlpha"), FormerlySerializedAs("contentOverlayAlpha")]
-    private float overlayOpacity = 0.9f;
     [SerializeField, FormerlySerializedAs("overlayTimeText"), FormerlySerializedAs("contentOverlayTimerText")]
     private TMP_Text overlayTime;
     [SerializeField, Min(0f), FormerlySerializedAs("overlayTimeY"), FormerlySerializedAs("contentOverlayTimerOffsetY")]
     private float overlayTimeOffsetY = 0.35f;
+    [SerializeField, Range(0f, 1f), FormerlySerializedAs("overlayAlpha"), FormerlySerializedAs("contentOverlayAlpha")]
+    private float overlayOpacity = 0.9f;
 
     [Header("Spawns")]
     [SerializeField] private ParticleSystem breakParticles;
@@ -114,6 +114,14 @@ public class Block : MonoBehaviour
         multiEndTime = -1f;
         isHidden = startsHidden;
         ApplyVisualState();
+    }
+
+    private void OnEnable()
+    {
+        if (Application.isPlaying) return;
+        CacheSpriteAlpha();
+        ApplyVisualState();
+        RefreshEditorPreviewSprite();
     }
 
     private void OnValidate()
@@ -505,10 +513,10 @@ public class Block : MonoBehaviour
 
         if (content)
         {
+            content.sprite = icon;
             content.enabled = show && icon;
             if (content.enabled)
             {
-                content.sprite = icon;
                 content.transform.localPosition = new Vector3(0f, overlayContentY, 0f);
                 var color = content.color;
                 color.a = Mathf.Clamp01(overlayOpacity);
@@ -527,7 +535,11 @@ public class Block : MonoBehaviour
 
         var showTime = show && contentType == BlockContent.Multi;
         timer.enabled = showTime;
-        if (!showTime) return;
+        if (!showTime)
+        {
+            timer.SetText(string.Empty);
+            return;
+        }
 
         if (timer.rectTransform)
         {
