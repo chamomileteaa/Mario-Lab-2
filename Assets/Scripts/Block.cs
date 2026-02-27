@@ -4,6 +4,10 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Serialization;
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEditor.Animations;
+#endif
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider2D))]
@@ -118,7 +122,7 @@ public class Block : MonoBehaviour
         NormalizeByKind();
         CacheSpriteAlpha();
         ApplyVisualState();
-        RefreshEditorAnimatorPreview();
+        RefreshEditorPreviewSprite();
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -302,7 +306,6 @@ public class Block : MonoBehaviour
         SyncAnimatorState();
 
         var sprite = Sprite;
-        var spriteAlpha = spriteBaseAlpha;
         var showMainSprite = !isHidden;
 
         if (sprite)
@@ -310,17 +313,16 @@ public class Block : MonoBehaviour
             if (Application.isPlaying)
             {
                 sprite.enabled = showMainSprite;
-                SetSpriteAlpha(spriteAlpha);
+                SetSpriteAlpha(spriteBaseAlpha);
             }
             else
             {
                 sprite.enabled = true;
-                spriteAlpha = startsHidden ? spriteBaseAlpha * hiddenEditorOpacity : spriteBaseAlpha;
-                SetSpriteAlpha(spriteAlpha);
+                SetSpriteAlpha(startsHidden ? hiddenEditorOpacity : 1f);
             }
         }
 
-        UpdateOverlay(spriteAlpha);
+        UpdateOverlay();
         BoxCollider.isTrigger = Application.isPlaying ? isHidden : initialTriggerState;
     }
 
@@ -398,11 +400,18 @@ public class Block : MonoBehaviour
 
     private SpriteRenderer ResolveSpriteRenderer()
     {
+        var named = transform.Find("Sprite");
+        if (named && named.TryGetComponent<SpriteRenderer>(out var namedRenderer))
+            return namedRenderer;
+
         var childRenderers = GetComponentsInChildren<SpriteRenderer>(true);
         for (var i = 0; i < childRenderers.Length; i++)
         {
             var childRenderer = childRenderers[i];
-            if (childRenderer && childRenderer.transform != transform)
+            if (!childRenderer || childRenderer.transform == transform) continue;
+            if (overlayContent && childRenderer == overlayContent) continue;
+            if (string.Equals(childRenderer.gameObject.name, "Content", StringComparison.OrdinalIgnoreCase)) continue;
+            if (childRenderer.transform.parent && string.Equals(childRenderer.transform.parent.name, "Overlay", StringComparison.OrdinalIgnoreCase)) continue;
                 return childRenderer;
         }
 
@@ -411,6 +420,17 @@ public class Block : MonoBehaviour
 
     private SpriteRenderer ResolveOverlayContent()
     {
+        var overlayRoot = transform.Find("Overlay");
+        if (overlayRoot)
+        {
+            var named = overlayRoot.Find("Content");
+            if (named && named.TryGetComponent<SpriteRenderer>(out var namedRenderer))
+                return namedRenderer;
+
+            var fromOverlay = overlayRoot.GetComponentInChildren<SpriteRenderer>(true);
+            if (fromOverlay) return fromOverlay;
+        }
+
         var main = Sprite;
         var childRenderers = GetComponentsInChildren<SpriteRenderer>(true);
         for (var i = 0; i < childRenderers.Length; i++)
@@ -428,17 +448,14 @@ public class Block : MonoBehaviour
         return GetComponentInChildren<TMP_Text>(true);
     }
 
-    private void RefreshEditorAnimatorPreview()
+    private void RefreshEditorPreviewSprite()
     {
         if (Application.isPlaying) return;
-
-        if (!TryGetUsableAnimator(out var animator)) return;
-
-        animator.Rebind();
-        animator.SetFloat(TypeParameterId, (float)kind);
-        animator.SetBool(IsDepletedParameterId, isUsed);
-        animator.Play(0, 0, 0f);
-        animator.Update(0f);
+#if UNITY_EDITOR
+        var sprite = Sprite;
+        var previewSprite = ResolveEditorPreviewSprite();
+        if (sprite && previewSprite) sprite.sprite = previewSprite;
+#endif
     }
 
     private void CacheSpriteAlpha()
@@ -450,7 +467,11 @@ public class Block : MonoBehaviour
             return;
         }
 
-        spriteBaseAlpha = sprite.color.a <= 0f ? 1f : sprite.color.a;
+        var alpha = sprite.color.a;
+        if (startsHidden && hiddenEditorOpacity > 0f)
+            alpha /= hiddenEditorOpacity;
+
+        spriteBaseAlpha = alpha <= 0f ? 1f : Mathf.Clamp01(alpha);
     }
 
     private void SetSpriteAlpha(float alpha)
@@ -476,7 +497,7 @@ public class Block : MonoBehaviour
         animator.SetBool(IsDepletedParameterId, isUsed);
     }
 
-    private void UpdateOverlay(float spriteAlpha)
+    private void UpdateOverlay()
     {
         var show = !Application.isPlaying && !isUsed && contentType != BlockContent.None;
         var icon = show ? GetOverlaySprite() : null;
@@ -490,7 +511,7 @@ public class Block : MonoBehaviour
                 content.sprite = icon;
                 content.transform.localPosition = new Vector3(0f, overlayContentY, 0f);
                 var color = content.color;
-                color.a = Mathf.Clamp01(spriteAlpha * overlayOpacity);
+                color.a = Mathf.Clamp01(overlayOpacity);
                 content.color = color;
                 var main = Sprite;
                 if (main)
@@ -521,7 +542,7 @@ public class Block : MonoBehaviour
         }
 
         var textColor = timer.color;
-        textColor.a = Mathf.Clamp01(spriteAlpha * overlayOpacity);
+        textColor.a = Mathf.Clamp01(overlayOpacity);
         timer.color = textColor;
         timer.SetText(OverlayTimeFormat, multiDuration);
     }
@@ -546,6 +567,75 @@ public class Block : MonoBehaviour
         if (!animator.gameObject.activeInHierarchy) return false;
         return true;
     }
+
+#if UNITY_EDITOR
+    private Sprite ResolveEditorPreviewSprite()
+    {
+        var controller = Animator ? Animator.runtimeAnimatorController as AnimatorController : null;
+        if (!controller || controller.layers == null || controller.layers.Length == 0) return null;
+
+        var stateMachine = controller.layers[0].stateMachine;
+        var motion = ResolveEditorPreviewMotion(stateMachine);
+        var clip = ResolveEditorPreviewAnimationClip(motion);
+        return clip ? GetFirstSpriteFromClip(clip) : null;
+    }
+
+    private Motion ResolveEditorPreviewMotion(AnimatorStateMachine stateMachine)
+    {
+        if (stateMachine == null) return null;
+
+        if (isUsed)
+        {
+            for (var i = 0; i < stateMachine.states.Length; i++)
+            {
+                var state = stateMachine.states[i].state;
+                if (state == null || !string.Equals(state.name, "Depleted", StringComparison.OrdinalIgnoreCase)) continue;
+                return state.motion;
+            }
+        }
+
+        var defaultState = stateMachine.defaultState;
+        return defaultState ? defaultState.motion : null;
+    }
+
+    private AnimationClip ResolveEditorPreviewAnimationClip(Motion motion)
+    {
+        if (!motion) return null;
+        if (motion is AnimationClip clip) return clip;
+        if (motion is not BlendTree tree || tree.children == null || tree.children.Length == 0) return null;
+
+        var target = (float)kind;
+        var bestIndex = 0;
+        var bestDiff = Mathf.Abs(tree.children[0].threshold - target);
+        for (var i = 1; i < tree.children.Length; i++)
+        {
+            var diff = Mathf.Abs(tree.children[i].threshold - target);
+            if (diff >= bestDiff) continue;
+            bestDiff = diff;
+            bestIndex = i;
+        }
+
+        return ResolveEditorPreviewAnimationClip(tree.children[bestIndex].motion);
+    }
+
+    private static Sprite GetFirstSpriteFromClip(AnimationClip clip)
+    {
+        if (!clip) return null;
+
+        var bindings = AnimationUtility.GetObjectReferenceCurveBindings(clip);
+        for (var i = 0; i < bindings.Length; i++)
+        {
+            var binding = bindings[i];
+            if (binding.type != typeof(SpriteRenderer) || binding.propertyName != "m_Sprite") continue;
+
+            var keys = AnimationUtility.GetObjectReferenceCurve(clip, binding);
+            if (keys == null || keys.Length == 0) continue;
+            if (keys[0].value is Sprite sprite) return sprite;
+        }
+
+        return null;
+    }
+#endif
 
     private void NormalizeByKind()
     {
