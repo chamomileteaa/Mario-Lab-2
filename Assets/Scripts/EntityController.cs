@@ -9,6 +9,8 @@ using UnityEngine;
 public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHandler, IKnockbackHandler
 {
     private const string PlayerTag = "Player";
+    private const string CameraBoundaryLayerName = "CameraBoundary";
+    private static int cameraBoundaryLayer = int.MinValue;
 
     [Flags]
     public enum TurnMatrix
@@ -25,13 +27,20 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
         KnockAway
     }
 
+    public enum SpawnFacingMode
+    {
+        Towards = 0,
+        Away = 1,
+        Random = 2
+    }
+
     [Header("Movement")]
     [SerializeField, Min(0f)] private float moveSpeed = 1.5f;
     [SerializeField, Min(0f)] private float acceleration = 40f;
     [SerializeField, Range(-1f, 1f)] private float moveDirectionX = -1f;
     [SerializeField] private bool moveOnEnable = true;
     [SerializeField] private bool startWhenVisible = true;
-    [SerializeField] private bool faceMarioOnSpawn = true;
+    [SerializeField] private SpawnFacingMode spawnFacingMode = SpawnFacingMode.Towards;
     [SerializeField] private TurnMatrix turnRules = TurnMatrix.Walls | TurnMatrix.Entities;
     [SerializeField, Min(0f)] private float turnCooldown = 0.1f;
     [SerializeField, Min(0.01f)] private float wallCheckDistance = 0.06f;
@@ -89,7 +98,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
 
     private void OnEnable()
     {
-        if (faceMarioOnSpawn) FaceMarioIfFound();
+        ApplySpawnFacingMode();
 
         startedMovement = !startWhenVisible;
         movementEnabled = moveOnEnable && startedMovement;
@@ -130,9 +139,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
     {
         if ((turnRules & TurnMatrix.Entities) == 0 || knockedAway) return;
         if (Time.time < nextTurnTime) return;
-
-        var other = ResolveOtherEntity(collision);
-        if (other)
+        if (TryGetOtherEntity(collision.collider, out _) || TryGetOtherEntity(collision.otherCollider, out _))
             ReverseDirection();
     }
 
@@ -260,30 +267,22 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
         if (!collider) return false;
         if (IsOwnCollider(collider)) return false;
         if (collider.CompareColliderTag(PlayerTag)) return false;
+        if (IsCameraBoundaryLayer(collider)) return (turnRules & TurnMatrix.Walls) != 0;
 
-        var otherEntity = ResolveEntityFromCollider(collider);
-        if (otherEntity)
+        if (TryGetOtherEntity(collider, out _))
             return (turnRules & TurnMatrix.Entities) != 0;
 
         return (turnRules & TurnMatrix.Walls) != 0;
     }
 
-    private EntityController ResolveOtherEntity(Collision2D collision)
+    private static bool IsCameraBoundaryLayer(Collider2D collider)
     {
-        if (TryResolveOtherEntity(collision.collider, out var other))
-            return other;
-        if (TryResolveOtherEntity(collision.otherCollider, out other))
-            return other;
-
-        return null;
+        if (cameraBoundaryLayer == int.MinValue)
+            cameraBoundaryLayer = LayerMask.NameToLayer(CameraBoundaryLayerName);
+        return collider.IsInLayer(cameraBoundaryLayer);
     }
 
-    private EntityController ResolveEntityFromCollider(Collider2D collider)
-    {
-        return TryResolveOtherEntity(collider, out var other) ? other : null;
-    }
-
-    private bool TryResolveOtherEntity(Collider2D collider, out EntityController other)
+    private bool TryGetOtherEntity(Collider2D collider, out EntityController other)
     {
         other = null;
         if (!collider) return false;
@@ -338,14 +337,38 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
         return sceneCamera.ContainsOrthographicPoint(transform.position);
     }
 
-    private void FaceMarioIfFound()
+    private void ApplySpawnFacingMode()
     {
         var mario = GameObject.FindGameObjectWithTag(PlayerTag);
-        if (!mario) return;
+        if (!mario)
+        {
+            if (spawnFacingMode == SpawnFacingMode.Random)
+                moveDirectionX = UnityEngine.Random.value < 0.5f ? -1f : 1f;
+            return;
+        }
 
         var delta = mario.transform.position.x - transform.position.x;
-        if (Mathf.Abs(delta) <= 0.001f) return;
-        moveDirectionX = delta > 0f ? 1f : -1f;
+        if (Mathf.Abs(delta) <= 0.001f)
+        {
+            if (spawnFacingMode == SpawnFacingMode.Random)
+                moveDirectionX = UnityEngine.Random.value < 0.5f ? -1f : 1f;
+            return;
+        }
+
+        switch (spawnFacingMode)
+        {
+            case SpawnFacingMode.Towards:
+                moveDirectionX = delta > 0f ? 1f : -1f;
+                break;
+
+            case SpawnFacingMode.Away:
+                moveDirectionX = delta > 0f ? -1f : 1f;
+                break;
+
+            case SpawnFacingMode.Random:
+                moveDirectionX = UnityEngine.Random.value < 0.5f ? -1f : 1f;
+                break;
+        }
     }
 
     private void SetCollidersEnabled(bool enabled)
