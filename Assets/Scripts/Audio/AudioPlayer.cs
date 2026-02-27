@@ -2,7 +2,7 @@ using UnityEngine;
 [RequireComponent(typeof(AudioSource))]
 public class AudioPlayer : MonoBehaviour
 {
-    private AudioSource source;
+    public AudioSource source;
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Awake()
@@ -19,5 +19,13 @@ public class AudioPlayer : MonoBehaviour
             : 1f;
 
         source.PlayOneShot(cue.clip, cue.volume);
+    }
+    
+    public void PlayExclusive(AudioCue cue)
+    {
+        source.Stop();
+        source.clip = cue.clip;
+        source.loop = true;
+        source.Play();
     }
 }

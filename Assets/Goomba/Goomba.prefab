@@ -107,6 +107,9 @@ GameObject:
   - component: {fileID: 3043196019594784460}
   - component: {fileID: 8571966152712908811}
   - component: {fileID: 5530217831234567890}
+  - component: {fileID: -8949555964194366312}
+  - component: {fileID: 1030562405748491961}
+  - component: {fileID: -4682681151958562240}
   m_Layer: 0
   m_Name: Goomba
   m_TagString: Enemy
@@ -146,7 +149,7 @@ MonoBehaviour:
   stompScore: 100
   scorePopupPrefab: {fileID: 6309700172672840609, guid: d6ea739a175e8df4d8832834f03bdd80, type: 3}
   scorePopupOffset: {x: 0, y: 0.35, z: 0}
-  defeatWhenKnockedAway: 1
+  defeatWhenKnockedBack: 1
   despawnBelowSpawnDistance: 12
 --- !u!114 &422437941071212904
 MonoBehaviour:
@@ -169,10 +172,13 @@ MonoBehaviour:
   turnRules: 3
   turnCooldown: 0.1
   wallCheckDistance: 0.06
+  useContinuousCollisionDetection: 1
   blockBumpReaction: 2
   bumpUpwardSpeed: 3.25
   knockAwayHorizontalSpeed: 2
   knockAwayGravityScale: 1
+  allowKnockbackHit: 1
+  allowStarHit: 1
 --- !u!50 &2328815970282145046
 Rigidbody2D:
   serializedVersion: 5
@@ -301,3 +307,126 @@ MonoBehaviour:
   deadzone: 0.01
   hasReferenceCollider: 1
   fallbackFlipOffset: {x: 0, y: 0}
+--- !u!82 &-8949555964194366312
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6155214355379843570}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &1030562405748491961
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6155214355379843570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5047c2937e749648a04b7766ef90864, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioPlayer
+--- !u!114 &-4682681151958562240
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6155214355379843570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f47ceb196008a249b687eb6713179b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAudio
+  audioPlayer: {fileID: 0}
+  deathCue: {fileID: 11400000, guid: b584b54467baf8e4d9130cc9d6e93a0b, type: 2}
