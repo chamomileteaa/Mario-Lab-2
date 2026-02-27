@@ -14,6 +14,10 @@ using UnityEditor.Animations;
 public class Block : MonoBehaviour
 {
     private const string PlayerTag = "Player";
+    private const string RedMushroomTag = "RedMushroom";
+    private const string FireFlowerTag = "FireFlower";
+    private const string StarmanTag = "Starman";
+    private const string OneUpMushroomTag = "OneUpMushroom";
     private const string TypeParameter = "Type";
     private const string IsDepletedParameter = "IsDepleted";
     private const string OverlayTimeFormat = "{0:0.#}";
@@ -494,7 +498,30 @@ public class Block : MonoBehaviour
 
     private void SpawnContent()
     {
-        PrefabPoolService.Spawn(contentPrefab, SpawnPosition, Quaternion.identity);
+        var spawned = PrefabPoolService.Spawn(contentPrefab, SpawnPosition, Quaternion.identity);
+        TryStartPowerupRise(spawned);
+    }
+
+    private void TryStartPowerupRise(GameObject spawned)
+    {
+        if (!spawned) return;
+        if (!IsPowerupSpawn(spawned)) return;
+
+        var riseController = spawned.GetComponent<PowerupController>();
+        if (!riseController)
+            riseController = spawned.AddComponent<PowerupController>();
+
+        riseController.BeginRising(Sprite);
+    }
+
+    private static bool IsPowerupSpawn(GameObject spawned)
+    {
+        if (!spawned) return false;
+
+        return spawned.CompareTag(RedMushroomTag) ||
+               spawned.CompareTag(FireFlowerTag) ||
+               spawned.CompareTag(StarmanTag) ||
+               spawned.CompareTag(OneUpMushroomTag);
     }
 
     private void SyncAnimatorState()

@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 4246708556877201877}
   - component: {fileID: 5335440424140605067}
   - component: {fileID: 2992177849954892201}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Fireflower
   m_TagString: FireFlower
   m_Icon: {fileID: 0}

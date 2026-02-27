@@ -16,6 +16,18 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1829048895021128474, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
+      propertyPath: m_SortingLayer
+      value: -1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1829048895021128474, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
+      propertyPath: m_SortingLayerID
+      value: 1533896481
+      objectReference: {fileID: 0}
+    - target: {fileID: 1829048895021128474, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
+      propertyPath: m_WasSpriteAssigned
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3962262345731032707, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
       propertyPath: m_Name
       value: FireflowerMysteryBox

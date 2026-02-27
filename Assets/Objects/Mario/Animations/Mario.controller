@@ -135,12 +135,6 @@ AnimatorStateTransition:
   - m_ConditionMode: 1
     m_ConditionEvent: grow
     m_EventTreshold: 0
-  - m_ConditionMode: 3
-    m_ConditionEvent: form
-    m_EventTreshold: -1
-  - m_ConditionMode: 4
-    m_ConditionEvent: form
-    m_EventTreshold: 1
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 1494764231053473265}
   m_Solo: 0
@@ -431,12 +425,6 @@ AnimatorStateTransition:
   - m_ConditionMode: 1
     m_ConditionEvent: die
     m_EventTreshold: 0
-  - m_ConditionMode: 3
-    m_ConditionEvent: form
-    m_EventTreshold: -1
-  - m_ConditionMode: 4
-    m_ConditionEvent: form
-    m_EventTreshold: 1
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 7790474899409658935}
   m_Solo: 0
@@ -941,12 +929,6 @@ AnimatorStateTransition:
   - m_ConditionMode: 1
     m_ConditionEvent: shrink
     m_EventTreshold: 0
-  - m_ConditionMode: 3
-    m_ConditionEvent: form
-    m_EventTreshold: 0
-  - m_ConditionMode: 4
-    m_ConditionEvent: form
-    m_EventTreshold: 2
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 9000197911581332866}
   m_Solo: 0

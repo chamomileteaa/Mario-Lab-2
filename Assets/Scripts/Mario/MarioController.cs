@@ -21,6 +21,7 @@ public class MarioController : MonoBehaviour
     private const float CrouchThreshold = -0.5f;
     private const float MinDeathBounceSpeed = 11f;
     private const PauseType MarioPauseBypassTypes = PauseType.Physics | PauseType.Animation;
+    private const PauseType MarioFormPauseBypassTypes = PauseType.Animation;
     private const PauseType GameplayPauseTypes = PauseType.Physics | PauseType.Animation | PauseType.Input;
 
     [Header("Input")]
@@ -43,9 +44,10 @@ public class MarioController : MonoBehaviour
     [Header("Form")]
     [SerializeField] private MarioForm initialForm = MarioForm.Small;
     [SerializeField, Min(0f)] private float damageInvulnerabilityTime = 1f;
+    [SerializeField, Min(0f)] private float formTransitionPauseFallback = 0.2f;
 
     [Header("Power")]
-    [SerializeField, Min(0f)] private float defaultSuperDuration = 10f;
+    [SerializeField, Min(0f)] private float defaultFormProtectionDuration = 10f;
     [SerializeField, Min(0f)] private float defaultStarPowerDuration = 10f;
 
     [Header("Collider")]
@@ -79,14 +81,16 @@ public class MarioController : MonoBehaviour
     private float coyoteTimer;
     private float jumpBufferTimer;
     private float damageInvulnerabilityTimer;
-    private float superTimer;
+    private float formProtectionTimer;
     private float starPowerTimer;
     private float jumpSpeed;
     private float shortJumpSpeed;
     private MarioForm form;
     private MarioForm pendingGrowForm;
     private Coroutine deathRoutine;
+    private Coroutine formTransitionRoutine;
     private bool deathPauseActive;
+    private bool formPauseActive;
     private readonly Collider2D[] groundHits = new Collider2D[4];
     private readonly ContactPoint2D[] groundContacts = new ContactPoint2D[8];
     private readonly Collider2D[] resizeHits = new Collider2D[4];
@@ -100,14 +104,14 @@ public class MarioController : MonoBehaviour
 
     public MarioForm Form => form;
     public bool IsSmall => form == MarioForm.Small;
-    public bool IsSuper => superTimer > 0f;
+    public bool IsFormProtected => formProtectionTimer > 0f;
     public bool IsStarPowered => starPowerTimer > 0f;
     public bool HasStarPower => IsStarPowered;
     public float StarPowerTimeRemaining => starPowerTimer;
     public bool IsDead => isDead;
     public bool IsGrounded => isGrounded;
     public bool IsDamageInvulnerable => damageInvulnerabilityTimer > 0f;
-    public bool IsInvincible => IsSuper || IsStarPowered || IsDamageInvulnerable;
+    public bool IsInvincible => IsStarPowered || IsDamageInvulnerable;
     public bool IsCrouching => isGrounded && moveInput.y < CrouchThreshold;
     public Vector2 MoveInput => moveInput;
 
@@ -128,15 +132,18 @@ public class MarioController : MonoBehaviour
         Body.simulated = true;
         BodyCollider.enabled = true;
         PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, false);
+        PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, false);
         moveAction.SetEnabled(true);
         jumpAction.SetEnabled(true);
     }
 
     private void OnDisable()
     {
+        StopFormTransitionSequence();
         StopDeathSequence();
         Visuals?.ResetVisuals();
         PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, false);
+        PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, false);
         jumpAction.SetEnabled(false);
         moveAction.SetEnabled(false);
     }
@@ -202,13 +209,14 @@ public class MarioController : MonoBehaviour
 
         form = targetForm;
         Visuals?.PlayFormTransition(grew);
+        StartFormTransitionPause(grew);
     }
 
-    public void ActivateSuper(float duration = -1f)
+    public void ActivateFormProtection(float duration = -1f)
     {
-        var targetDuration = duration < 0f ? defaultSuperDuration : duration;
+        var targetDuration = duration < 0f ? defaultFormProtectionDuration : duration;
         if (targetDuration <= 0f) return;
-        superTimer = Mathf.Max(superTimer, targetDuration);
+        formProtectionTimer = Mathf.Max(formProtectionTimer, targetDuration);
     }
 
     public void ActivateStarPower(float duration = -1f)
@@ -256,7 +264,7 @@ public class MarioController : MonoBehaviour
         damageInvulnerabilityTimer = Mathf.Max(0f, damageInvulnerabilityTimer - Time.deltaTime);
         if (PauseService.IsPaused(PauseType.Physics)) return;
 
-        superTimer = Mathf.Max(0f, superTimer - Time.deltaTime);
+        formProtectionTimer = Mathf.Max(0f, formProtectionTimer - Time.deltaTime);
         starPowerTimer = Mathf.Max(0f, starPowerTimer - Time.deltaTime);
     }
 
@@ -342,10 +350,11 @@ public class MarioController : MonoBehaviour
     {
         if (isDead) return;
 
+        StopFormTransitionSequence();
         isDead = true;
         pendingGrow = false;
         damageInvulnerabilityTimer = 0f;
-        superTimer = 0f;
+        formProtectionTimer = 0f;
         starPowerTimer = 0f;
 
         moveInput = Vector2.zero;
@@ -406,17 +415,31 @@ public class MarioController : MonoBehaviour
         pendingGrow = false;
         form = pendingGrowForm;
         Visuals?.PlayFormTransition(true);
+        StartFormTransitionPause(true);
     }
 
     private bool TryApplyBigCollider()
     {
+        var currentBounds = BodyCollider.bounds;
+        var targetCenter = (Vector2)transform.position + bigColliderOffset;
+        var targetBounds = new Bounds(targetCenter, bigColliderSize);
+        var addedHeight = targetBounds.max.y - currentBounds.max.y;
+        if (addedHeight <= 0f)
+        {
+            SetBodyCollider(bigColliderSize, bigColliderOffset);
+            return true;
+        }
+
+        var checkCenter = new Vector2(targetBounds.center.x, currentBounds.max.y + addedHeight * 0.5f);
+        var checkSize = new Vector2(targetBounds.size.x, addedHeight);
         var filter = new ContactFilter2D { useTriggers = false };
-        var center = (Vector2)transform.position + bigColliderOffset;
-        var hitCount = Physics2D.OverlapBox(center, bigColliderSize, 0f, filter, resizeHits);
+        var hitCount = Physics2D.OverlapBox(checkCenter, checkSize, 0f, filter, resizeHits);
+
         for (var i = 0; i < hitCount; i++)
         {
-            if (resizeHits[i] && !resizeHits[i].isTrigger && !IsOwnCollider(resizeHits[i]))
-                return false;
+            var hit = resizeHits[i];
+            if (!hit || hit.isTrigger || IsOwnCollider(hit)) continue;
+            return false;
         }
 
         SetBodyCollider(bigColliderSize, bigColliderOffset);
@@ -486,6 +509,61 @@ public class MarioController : MonoBehaviour
 
         var scene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(scene.name);
+    }
+
+    private void StartFormTransitionPause(bool grew)
+    {
+        var duration = Visuals ? Visuals.GetFormTransitionDuration(grew) : 0f;
+        if (duration <= 0f) duration = formTransitionPauseFallback;
+        if (duration <= 0f)
+        {
+            StopFormTransitionSequence();
+            return;
+        }
+
+        if (formTransitionRoutine != null)
+            StopCoroutine(formTransitionRoutine);
+
+        if (formPauseActive)
+        {
+            PauseService.Resume(GameplayPauseTypes);
+            formPauseActive = false;
+        }
+
+        formTransitionRoutine = StartCoroutine(FormTransitionPauseSequence(duration));
+    }
+
+    private void StopFormTransitionSequence()
+    {
+        if (formTransitionRoutine != null)
+        {
+            StopCoroutine(formTransitionRoutine);
+            formTransitionRoutine = null;
+        }
+
+        PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, false);
+        if (!formPauseActive) return;
+
+        PauseService.Resume(GameplayPauseTypes);
+        formPauseActive = false;
+    }
+
+    private IEnumerator FormTransitionPauseSequence(float duration)
+    {
+        PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, true);
+        PauseService.Pause(GameplayPauseTypes);
+        formPauseActive = true;
+
+        yield return new WaitForSecondsRealtime(duration);
+
+        PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, false);
+        if (formPauseActive)
+        {
+            PauseService.Resume(GameplayPauseTypes);
+            formPauseActive = false;
+        }
+
+        formTransitionRoutine = null;
     }
 
     private float GetDeathCutoffY(float fallbackCutoffY)

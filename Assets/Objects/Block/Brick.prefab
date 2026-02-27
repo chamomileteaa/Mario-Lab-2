@@ -110,8 +110,8 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: 1533896481
+  m_SortingLayer: -1
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: -1895548009, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}
@@ -205,7 +205,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 8391431092616798930, guid: fc4890d02bb8a0346b85cab08dfd6ca2, type: 3}
+  m_Sprite: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 0.8}
   m_FlipX: 0
   m_FlipY: 0
@@ -213,7 +213,7 @@ SpriteRenderer:
   m_Size: {x: 0.5, y: 0.875}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!1 &3173372560840613044
 GameObject:
@@ -321,7 +321,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: '#5'
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ed10095790337a748b1f7a338e60046e, type: 2}
   m_sharedMaterial: {fileID: 830618657052100897, guid: ed10095790337a748b1f7a338e60046e, type: 2}
@@ -454,9 +454,9 @@ MonoBehaviour:
   hiddenEditorOpacity: 0.35
   overlayContent: {fileID: 1829048895021128474}
   overlayContentY: 0.6
-  overlayOpacity: 0.8
   overlayTime: {fileID: 773434973267060728}
   overlayTimeOffsetY: 0.2
+  overlayOpacity: 0.8
   breakParticles: {fileID: 8160012036953548810, guid: 560d41791e4062a4b9608931a1a069f7, type: 3}
   hitCooldown: 0.05
   bumpHeight: 0.5

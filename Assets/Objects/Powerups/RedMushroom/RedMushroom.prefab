@@ -144,8 +144,8 @@ MonoBehaviour:
   moveDirectionX: -1
   moveOnEnable: 1
   startWhenVisible: 1
-  faceMarioOnSpawn: 1
-  turnRules: 3
+  spawnFacingMode: 0
+  turnRules: 7
   turnCooldown: 0.1
   wallCheckDistance: 0.06
   useContinuousCollisionDetection: 1
@@ -250,3 +250,4 @@ MonoBehaviour:
   deadzone: 0.01
   hasReferenceCollider: 1
   fallbackFlipOffset: {x: 0, y: 0}
+
