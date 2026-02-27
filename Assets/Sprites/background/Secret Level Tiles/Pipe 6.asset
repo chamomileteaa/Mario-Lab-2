@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b08ceb78e3b2495b8d808a5860e66794, type: 3}
-  m_Name: Pipe 2
+  m_Name: Pipe 6
   m_EditorClassIdentifier: Unity.2D.Tilemap.Extras::UnityEngine.Tilemaps.AutoTile
-  m_DefaultSprite: {fileID: 21300000, guid: e36e4f6a448d64ae4bd084bb814a3f65, type: 2}
+  m_DefaultSprite: {fileID: 21300000, guid: 63cc76d9ae9744865a3ce90bad7d18d3, type: 2}
   m_DefaultGameObject: {fileID: 0}
   m_DefaultColliderType: 1
   m_MaskType: 0
