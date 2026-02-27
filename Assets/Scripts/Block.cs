@@ -1,13 +1,20 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider2D))]
 public class Block : MonoBehaviour
 {
     private const string PlayerTag = "Player";
+    private const string TypeParameter = "Type";
+    private const string IsDepletedParameter = "IsDepleted";
+    private const string OverlayTimeFormat = "{0:0.#}";
+    private static readonly int TypeParameterId = Animator.StringToHash(TypeParameter);
+    private static readonly int IsDepletedParameterId = Animator.StringToHash(IsDepletedParameter);
 
     public static event Action<BlockBumpContext> Bumped;
 
@@ -38,7 +45,6 @@ public class Block : MonoBehaviour
         Exhausted = 1
     }
 
-    [Header("Type")]
     [SerializeField] private BlockKind kind = BlockKind.Brick;
 
     [Header("Content")]
@@ -53,8 +59,17 @@ public class Block : MonoBehaviour
     [SerializeField] private bool startsHidden;
     [SerializeField, Range(0.05f, 1f)] private float hiddenEditorOpacity = 0.35f;
 
-    [Header("Visuals")]
-    [SerializeField] private Sprite usedSprite;
+    [Header("Overlay")]
+    [SerializeField, FormerlySerializedAs("overlayRenderer"), FormerlySerializedAs("contentOverlayRenderer")]
+    private SpriteRenderer overlayContent;
+    [SerializeField, Min(0f), FormerlySerializedAs("overlayY"), FormerlySerializedAs("contentOverlayHeight")]
+    private float overlayContentY = 0.6f;
+    [SerializeField, Range(0f, 1f), FormerlySerializedAs("overlayAlpha"), FormerlySerializedAs("contentOverlayAlpha")]
+    private float overlayOpacity = 0.9f;
+    [SerializeField, FormerlySerializedAs("overlayTimeText"), FormerlySerializedAs("contentOverlayTimerText")]
+    private TMP_Text overlayTime;
+    [SerializeField, Min(0f), FormerlySerializedAs("overlayTimeY"), FormerlySerializedAs("contentOverlayTimerOffsetY")]
+    private float overlayTimeOffsetY = 0.35f;
 
     [Header("Spawns")]
     [SerializeField] private ParticleSystem breakParticles;
@@ -66,12 +81,9 @@ public class Block : MonoBehaviour
 
     private BoxCollider2D boxCollider2D;
     private SpriteRenderer spriteRenderer;
-    private Collider2D[] ownColliders = Array.Empty<Collider2D>();
-    private readonly HashSet<int> ownColliderIds = new HashSet<int>();
+    private Animator animatorComponent;
     private readonly Collider2D[] bumpHits = new Collider2D[12];
     private readonly HashSet<int> bumpNotifiedIds = new HashSet<int>();
-    private readonly Dictionary<int, IBlockBumpHandler[]> bumpHandlersByColliderId = new Dictionary<int, IBlockBumpHandler[]>(32);
-    private readonly Dictionary<int, MarioController> marioByColliderId = new Dictionary<int, MarioController>(8);
 
     private float nextHitTime;
     private float multiEndTime = -1f;
@@ -84,23 +96,20 @@ public class Block : MonoBehaviour
 
     private BoxCollider2D BoxCollider => boxCollider2D ? boxCollider2D : boxCollider2D = GetComponent<BoxCollider2D>();
     private SpriteRenderer Sprite => spriteRenderer ? spriteRenderer : spriteRenderer = ResolveSpriteRenderer();
+    private Animator Animator => animatorComponent ? animatorComponent : animatorComponent = GetComponent<Animator>();
+    private SpriteRenderer OverlayContent => overlayContent ? overlayContent : overlayContent = ResolveOverlayContent();
+    private TMP_Text OverlayTime => overlayTime ? overlayTime : overlayTime = ResolveOverlayTime();
     private Vector3 SpawnPosition => BoxCollider.bounds.center;
 
     private void Awake()
     {
         NormalizeByKind();
         initialTriggerState = BoxCollider.isTrigger;
-        RebuildOwnColliderCache();
         CacheSpriteAlpha();
 
         multiEndTime = -1f;
         isHidden = startsHidden;
         ApplyVisualState();
-    }
-
-    private void OnEnable()
-    {
-        RebuildOwnColliderCache();
     }
 
     private void OnValidate()
@@ -109,12 +118,7 @@ public class Block : MonoBehaviour
         NormalizeByKind();
         CacheSpriteAlpha();
         ApplyVisualState();
-    }
-
-    private void OnDisable()
-    {
-        bumpHandlersByColliderId.Clear();
-        marioByColliderId.Clear();
+        RefreshEditorAnimatorPreview();
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -149,22 +153,12 @@ public class Block : MonoBehaviour
     private bool TryResolveMario(Collider2D collider, out MarioController mario, out Rigidbody2D body)
     {
         mario = null;
-        body = null;
-
-        var colliderId = collider.GetInstanceID();
-        if (marioByColliderId.TryGetValue(colliderId, out mario) && mario)
-        {
-            body = mario.GetComponent<Rigidbody2D>();
-            return body;
-        }
-
         body = collider.attachedRigidbody;
         if (!body) return false;
 
         if (!body.TryGetComponent(out mario) && !collider.TryGetComponentInParent(out mario))
             return false;
 
-        marioByColliderId[colliderId] = mario;
         return true;
     }
 
@@ -295,7 +289,7 @@ public class Block : MonoBehaviour
         foreach (var renderer in GetComponentsInChildren<SpriteRenderer>(true))
             if (renderer) renderer.enabled = false;
 
-        foreach (var collider in ownColliders)
+        foreach (var collider in GetComponentsInChildren<Collider2D>(true))
             if (collider) collider.enabled = false;
 
         enabled = false;
@@ -305,24 +299,28 @@ public class Block : MonoBehaviour
 
     private void ApplyVisualState()
     {
+        SyncAnimatorState();
+
         var sprite = Sprite;
+        var spriteAlpha = spriteBaseAlpha;
+        var showMainSprite = !isHidden;
+
         if (sprite)
         {
-            if (isUsed && usedSprite) sprite.sprite = usedSprite;
-
             if (Application.isPlaying)
             {
-                sprite.enabled = !isHidden;
-                SetSpriteAlpha(spriteBaseAlpha);
+                sprite.enabled = showMainSprite;
+                SetSpriteAlpha(spriteAlpha);
             }
             else
             {
                 sprite.enabled = true;
-                var previewAlpha = startsHidden ? spriteBaseAlpha * hiddenEditorOpacity : spriteBaseAlpha;
-                SetSpriteAlpha(previewAlpha);
+                spriteAlpha = startsHidden ? spriteBaseAlpha * hiddenEditorOpacity : spriteBaseAlpha;
+                SetSpriteAlpha(spriteAlpha);
             }
         }
 
+        UpdateOverlay(spriteAlpha);
         BoxCollider.isTrigger = Application.isPlaying ? isHidden : initialTriggerState;
     }
 
@@ -365,32 +363,14 @@ public class Block : MonoBehaviour
 
     private void NotifyHandlersForCollider(Collider2D hit, in BlockBumpContext context)
     {
-        var handlers = GetCachedBumpHandlers(hit);
-        for (var i = 0; i < handlers.Length; i++)
-        {
-            if (handlers[i] is not MonoBehaviour behaviour || !behaviour || behaviour == this) continue;
-            if (!bumpNotifiedIds.Add(behaviour.GetInstanceID())) continue;
-            handlers[i].HandleBlockBump(in context);
-        }
-    }
-
-    private IBlockBumpHandler[] GetCachedBumpHandlers(Collider2D hit)
-    {
-        var colliderId = hit.GetInstanceID();
-        if (bumpHandlersByColliderId.TryGetValue(colliderId, out var cachedHandlers))
-            return cachedHandlers;
-
         var behaviours = hit.GetComponentsInParent<MonoBehaviour>(true);
-        var handlers = new List<IBlockBumpHandler>(2);
         for (var i = 0; i < behaviours.Length; i++)
         {
-            if (behaviours[i] is IBlockBumpHandler handler)
-                handlers.Add(handler);
+            if (behaviours[i] is not IBlockBumpHandler handler) continue;
+            if (behaviours[i] is not MonoBehaviour behaviour || !behaviour || behaviour == this) continue;
+            if (!bumpNotifiedIds.Add(behaviour.GetInstanceID())) continue;
+            handler.HandleBlockBump(in context);
         }
-
-        cachedHandlers = handlers.Count == 0 ? Array.Empty<IBlockBumpHandler>() : handlers.ToArray();
-        bumpHandlersByColliderId[colliderId] = cachedHandlers;
-        return cachedHandlers;
     }
 
     private IEnumerator BumpSprite(Transform spriteTransform)
@@ -411,18 +391,9 @@ public class Block : MonoBehaviour
         bumpRoutine = null;
     }
 
-    private void RebuildOwnColliderCache()
-    {
-        ownColliders = GetComponentsInChildren<Collider2D>(true);
-        ownColliderIds.Clear();
-        for (var i = 0; i < ownColliders.Length; i++)
-            if (ownColliders[i])
-                ownColliderIds.Add(ownColliders[i].GetInstanceID());
-    }
-
     private bool IsOwnCollider(Collider2D collider)
     {
-        return collider && ownColliderIds.Contains(collider.GetInstanceID());
+        return collider && (collider == BoxCollider || collider.transform.IsChildOf(transform));
     }
 
     private SpriteRenderer ResolveSpriteRenderer()
@@ -436,6 +407,38 @@ public class Block : MonoBehaviour
         }
 
         return GetComponent<SpriteRenderer>();
+    }
+
+    private SpriteRenderer ResolveOverlayContent()
+    {
+        var main = Sprite;
+        var childRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+        for (var i = 0; i < childRenderers.Length; i++)
+        {
+            var childRenderer = childRenderers[i];
+            if (!childRenderer || childRenderer == main) continue;
+            return childRenderer;
+        }
+
+        return null;
+    }
+
+    private TMP_Text ResolveOverlayTime()
+    {
+        return GetComponentInChildren<TMP_Text>(true);
+    }
+
+    private void RefreshEditorAnimatorPreview()
+    {
+        if (Application.isPlaying) return;
+
+        if (!TryGetUsableAnimator(out var animator)) return;
+
+        animator.Rebind();
+        animator.SetFloat(TypeParameterId, (float)kind);
+        animator.SetBool(IsDepletedParameterId, isUsed);
+        animator.Play(0, 0, 0f);
+        animator.Update(0f);
     }
 
     private void CacheSpriteAlpha()
@@ -463,6 +466,85 @@ public class Block : MonoBehaviour
     private void SpawnContent()
     {
         PrefabPoolService.Spawn(contentPrefab, SpawnPosition, Quaternion.identity);
+    }
+
+    private void SyncAnimatorState()
+    {
+        if (!TryGetUsableAnimator(out var animator)) return;
+
+        animator.SetFloat(TypeParameterId, (float)kind);
+        animator.SetBool(IsDepletedParameterId, isUsed);
+    }
+
+    private void UpdateOverlay(float spriteAlpha)
+    {
+        var show = !Application.isPlaying && !isUsed && contentType != BlockContent.None;
+        var icon = show ? GetOverlaySprite() : null;
+        var content = OverlayContent;
+
+        if (content)
+        {
+            content.enabled = show && icon;
+            if (content.enabled)
+            {
+                content.sprite = icon;
+                content.transform.localPosition = new Vector3(0f, overlayContentY, 0f);
+                var color = content.color;
+                color.a = Mathf.Clamp01(spriteAlpha * overlayOpacity);
+                content.color = color;
+                var main = Sprite;
+                if (main)
+                {
+                    content.sortingLayerID = main.sortingLayerID;
+                    content.sortingOrder = main.sortingOrder + 1;
+                }
+            }
+        }
+
+        var timer = OverlayTime;
+        if (!timer) return;
+
+        var showTime = show && contentType == BlockContent.Multi;
+        timer.enabled = showTime;
+        if (!showTime) return;
+
+        if (timer.rectTransform)
+        {
+            var rect = timer.rectTransform;
+            var anchored = rect.anchoredPosition;
+            anchored.y = overlayTimeOffsetY;
+            rect.anchoredPosition = anchored;
+        }
+        else
+        {
+            timer.transform.localPosition = Vector3.up * overlayTimeOffsetY;
+        }
+
+        var textColor = timer.color;
+        textColor.a = Mathf.Clamp01(spriteAlpha * overlayOpacity);
+        timer.color = textColor;
+        timer.SetText(OverlayTimeFormat, multiDuration);
+    }
+
+    private Sprite GetOverlaySprite()
+    {
+        if (contentType == BlockContent.None || !contentPrefab) return null;
+
+        if (contentPrefab.TryGetComponent(out SpriteRenderer root) && root.sprite)
+            return root.sprite;
+
+        var child = contentPrefab.GetComponentInChildren<SpriteRenderer>(true);
+        return child ? child.sprite : null;
+    }
+
+    private bool TryGetUsableAnimator(out Animator animator)
+    {
+        animator = Animator;
+        if (!animator) return false;
+        if (!animator.runtimeAnimatorController) return false;
+        if (!animator.isActiveAndEnabled) return false;
+        if (!animator.gameObject.activeInHierarchy) return false;
+        return true;
     }
 
     private void NormalizeByKind()
