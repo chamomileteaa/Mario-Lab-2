@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -96,11 +97,21 @@ public class PrefabPool : MonoBehaviour
 
     public void Prewarm(int count)
     {
-        if (!prefab || count <= 0) return;
-        if (count <= inactive.Count) return;
+        EnsurePrewarm(count);
+    }
 
-        var needed = Mathf.Min(count - inactive.Count, Mathf.Max(0, maxSize - inactive.Count));
-        for (var i = 0; i < needed; i++) inactive.Push(CreateInstance());
+    public IEnumerator PrewarmAsync(int count, int createsPerFrame = 1)
+    {
+        if (!prefab || count <= 0) yield break;
+
+        var createBudget = Mathf.Max(1, createsPerFrame);
+        while (inactive.Count < count && inactive.Count < maxSize)
+        {
+            var createdThisFrame = EnsurePrewarm(count, createBudget);
+            if (createdThisFrame <= 0) yield break;
+            if (inactive.Count < count && inactive.Count < maxSize)
+                yield return null;
+        }
     }
 
     public void ClearInactive()
@@ -136,5 +147,26 @@ public class PrefabPool : MonoBehaviour
         pooled.Bind(this);
         pooled.SetInPool(true);
         return pooled;
+    }
+
+    private int EnsurePrewarm(int count, int maxCreateCount = int.MaxValue)
+    {
+        if (!prefab || count <= 0) return 0;
+        if (count <= inactive.Count) return 0;
+        if (maxCreateCount <= 0) return 0;
+
+        var needed = Mathf.Min(count - inactive.Count, Mathf.Max(0, maxSize - inactive.Count));
+        var createCount = Mathf.Min(needed, maxCreateCount);
+        var created = 0;
+
+        for (var i = 0; i < createCount; i++)
+        {
+            var pooled = CreateInstance();
+            if (!pooled) break;
+            inactive.Push(pooled);
+            created++;
+        }
+
+        return created;
     }
 }

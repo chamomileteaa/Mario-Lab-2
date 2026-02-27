@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class PowerupController : MonoBehaviour
 {
+    private const string PlayerTag = "Player";
+
     public enum PowerupType
     {
         FormUpgrade = 0,
@@ -50,7 +52,7 @@ public class PowerupController : MonoBehaviour
     {
         if (collected) return false;
         if (!collider) return false;
-        if (!collider.CompareColliderTag("Player")) return false;
+        if (!collider.CompareColliderTag(PlayerTag)) return false;
         if (!collider.TryGetComponentInParent(out MarioController mario)) return false;
 
         ApplyTo(mario);

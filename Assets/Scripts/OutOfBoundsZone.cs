@@ -4,6 +4,8 @@ using UnityEngine;
 [RequireComponent(typeof(BoxCollider2D))]
 public class OutOfBoundsZone : MonoBehaviour
 {
+    private const string PlayerTag = "Player";
+
     [SerializeField] private bool affectMario = true;
     [SerializeField] private bool despawnEntities = true;
     [SerializeField] private bool despawnOtherRigidbodies;
@@ -25,7 +27,7 @@ public class OutOfBoundsZone : MonoBehaviour
     {
         if (!other) return;
 
-        if (affectMario && other.CompareColliderTag("Player") &&
+        if (affectMario && other.CompareColliderTag(PlayerTag) &&
             other.TryGetComponentInParent(out MarioController mario))
         {
             mario.KillFromOutOfBounds();
@@ -40,7 +42,7 @@ public class OutOfBoundsZone : MonoBehaviour
 
         if (!despawnOtherRigidbodies) return;
         if (!other.attachedRigidbody) return;
-        if (other.CompareColliderTag("Player")) return;
+        if (other.CompareColliderTag(PlayerTag)) return;
         PrefabPoolService.Despawn(other.attachedRigidbody.gameObject);
     }
 }

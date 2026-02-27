@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
 
 public static class PrefabPoolService
@@ -22,6 +23,17 @@ public static class PrefabPoolService
         if (!autoCreatePools) return null;
 
         return CreateRuntimePool(prefab);
+    }
+
+    public static IEnumerator PrewarmRoutine(GameObject prefab, int targetCount = -1, int createsPerFrame = 1)
+    {
+        if (!prefab) yield break;
+
+        var pool = GetOrCreatePool(prefab);
+        if (!pool) yield break;
+
+        var resolvedCount = targetCount < 0 ? autoCreatePrewarmCount : targetCount;
+        yield return pool.PrewarmAsync(resolvedCount, createsPerFrame);
     }
 
     public static GameObject Spawn(GameObject prefab, Vector3 position, Quaternion rotation, Transform parent = null)

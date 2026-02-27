@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 2475018806816654778}
   - component: {fileID: 9048264052663379880}
   - component: {fileID: 4476322568590299076}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Camera Left Boundary
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -124,4 +124,3 @@ MonoBehaviour:
   extraHeight: 100
   wallEdgeOffset: 0
   followCameraY: 1
-  marioOnlyCollision: 1

@@ -7,6 +7,8 @@ using UnityEngine;
 [RequireComponent(typeof(BoxCollider2D))]
 public class Block : MonoBehaviour
 {
+    private const string PlayerTag = "Player";
+
     public static event Action<BlockBumpContext> Bumped;
 
     public enum BlockKind
@@ -136,7 +138,7 @@ public class Block : MonoBehaviour
     private bool TryHitFromCollider(Collider2D collider, bool requireUpward)
     {
         if (!collider) return false;
-        if (!collider.CompareColliderTag("Player")) return false;
+        if (!collider.CompareColliderTag(PlayerTag)) return false;
         if (!TryResolveMario(collider, out var mario, out var body)) return false;
         if (!CanHeadbuttFromBelow(body, collider.bounds, requireUpward)) return false;
 

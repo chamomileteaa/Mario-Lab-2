@@ -8,6 +8,17 @@ public class MarioVisuals : MonoBehaviour
 {
     private const float InputDeadzone = 0.01f;
     private const float MinAnimMoveSpeed = 0.2f;
+    private const string GrowTrigger = "grow";
+    private const string ShrinkTrigger = "shrink";
+    private const string DieTrigger = "die";
+    private const string AbsVelocityXParameter = "absVelocityX";
+    private const string VelocityXParameter = "velocityX";
+    private const string InputXParameter = "inputX";
+    private const string VelocityYParameter = "velocityY";
+    private const string IsGroundedParameter = "isGrounded";
+    private const string IsCrouchingParameter = "isCrouching";
+    private const string IsSkiddingParameter = "isSkidding";
+    private const string FormParameter = "form";
 
     [Header("Damage Flicker")]
     [SerializeField, Range(0.05f, 1f)] private float invulnerabilityMinAlpha = 0.35f;
@@ -51,12 +62,12 @@ public class MarioVisuals : MonoBehaviour
 
     public void PlayFormTransition(bool grew)
     {
-        Anim.TrySetTrigger(grew ? "grow" : "shrink");
+        Anim.TrySetTrigger(grew ? GrowTrigger : ShrinkTrigger);
     }
 
     public void PlayDeath()
     {
-        Anim.TrySetTrigger("die");
+        Anim.TrySetTrigger(DieTrigger);
     }
 
     public void ResetVisuals()
@@ -73,14 +84,14 @@ public class MarioVisuals : MonoBehaviour
         var absVelocityX = Mathf.Abs(velocity.x);
         if (Mathf.Abs(inputX) > InputDeadzone) absVelocityX = Mathf.Max(absVelocityX, MinAnimMoveSpeed);
 
-        Anim.TrySet("absVelocityX", absVelocityX);
-        Anim.TrySet("velocityX", velocity.x);
-        Anim.TrySet("inputX", inputX);
-        Anim.TrySet("velocityY", velocity.y);
-        Anim.TrySet("isGrounded", Mario.IsGrounded);
-        Anim.TrySet("isCrouching", Mario.IsCrouching);
-        Anim.TrySet("isSkidding", IsSkidding(inputX, velocity.x));
-        Anim.TrySet("form", (float)Mario.Form);
+        Anim.TrySet(AbsVelocityXParameter, absVelocityX);
+        Anim.TrySet(VelocityXParameter, velocity.x);
+        Anim.TrySet(InputXParameter, inputX);
+        Anim.TrySet(VelocityYParameter, velocity.y);
+        Anim.TrySet(IsGroundedParameter, Mario.IsGrounded);
+        Anim.TrySet(IsCrouchingParameter, Mario.IsCrouching);
+        Anim.TrySet(IsSkiddingParameter, IsSkidding(inputX, velocity.x));
+        Anim.TrySet(FormParameter, (float)Mario.Form);
     }
 
     private void UpdateSpriteDirection()

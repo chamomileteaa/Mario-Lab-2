@@ -25,4 +25,5 @@ public class MarioAudio: MonoBehaviour
     {
         
     }
+    //listens to the event. Once event is listened to, play the audio.
 }

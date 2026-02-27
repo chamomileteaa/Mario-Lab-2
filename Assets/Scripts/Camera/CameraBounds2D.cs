@@ -5,6 +5,8 @@ using UnityEngine;
 [RequireComponent(typeof(BoxCollider2D))]
 public class CameraBounds2D : MonoBehaviour
 {
+    private const string PlayerTag = "Player";
+
     public static event Action<CameraBounds2D> MarioEntered;
     public static event Action<CameraBounds2D> MarioExited;
 
@@ -29,13 +31,13 @@ public class CameraBounds2D : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!other.CompareColliderTag("Player")) return;
+        if (!other.CompareColliderTag(PlayerTag)) return;
         MarioEntered?.Invoke(this);
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        if (!other.CompareColliderTag("Player")) return;
+        if (!other.CompareColliderTag(PlayerTag)) return;
         MarioExited?.Invoke(this);
     }
 }
