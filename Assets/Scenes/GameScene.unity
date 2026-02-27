@@ -352,11 +352,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3d1e140c7301442e7a8fdf54abe5e7ce, type: 3}
---- !u!4 &373317566 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 2457174007496788368, guid: 3d1e140c7301442e7a8fdf54abe5e7ce, type: 3}
-  m_PrefabInstance: {fileID: 373317565}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &411383620 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8976419940446995659, guid: b2d1dde066e85774abec6d5daa268332, type: 3}
@@ -477,7 +472,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 373317566}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!483693784 &679585760
 TilemapRenderer:
@@ -2680,9 +2675,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MarioAudio
   audioPlayer: {fileID: 2121907909}
   jumpCue: {fileID: 11400000, guid: 4f466592b182bbe47ba404774469b7b6, type: 2}
-  growCue: {fileID: 0}
-  shrinkPipeCue: {fileID: 0}
-  LifeUpCue: {fileID: 0}
+  growCue: {fileID: 11400000, guid: 5c167a3d3dece9d47bfccecf3c7fdd55, type: 2}
+  shrinkPipeCue: {fileID: 11400000, guid: 12303f6f31adc3846ae847a9a7cf433d, type: 2}
+  LifeUpCue: {fileID: 11400000, guid: 9433072fc894a32468b3abfe04be8f51, type: 2}
 --- !u!114 &2121907909
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3221,3 +3216,4 @@ SceneRoots:
   - {fileID: 858615869}
   - {fileID: 915371638}
   - {fileID: 103318630}
+  - {fileID: 679585759}
