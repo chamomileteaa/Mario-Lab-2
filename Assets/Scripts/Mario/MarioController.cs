@@ -279,11 +279,11 @@ public class MarioController : MonoBehaviour
         jumpBufferTimer = 0f;
         coyoteTimer = 0f;
 
+        marioSFX.PlayJump();
         var velocity = Body.linearVelocity;
         if (velocity.y < 0f) velocity.y = 0f;
         velocity.y = jumpSpeed;
         Body.linearVelocity = velocity;
-        marioSFX.PlayJump();
     }
 
     private void ApplyHorizontalMovement()

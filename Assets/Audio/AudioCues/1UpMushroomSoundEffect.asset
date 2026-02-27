@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bad284048a983964d82198368515c326, type: 3}
-  m_Name: MarioJumpAudioCue
+  m_Name: 1UpMushroomSoundEffect
   m_EditorClassIdentifier: Assembly-CSharp::AudioCue
-  clip: {fileID: 8300000, guid: e1acc8f8cd1ef66409d2adbbd7e15b93, type: 3}
+  clip: {fileID: 8300000, guid: ce5fb0cd7a6118d4d88fd11dce41ffac, type: 3}
   volume: 1
   randomPitch: 1
   pitchRange: {x: 0.95, y: 1.05}

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bad284048a983964d82198368515c326, type: 3}
   m_Name: LevelClearTheme
   m_EditorClassIdentifier: Assembly-CSharp::AudioCue
-  clip: {fileID: 0}
+  clip: {fileID: 8300000, guid: f1b2702635a942546aec2466907b91a9, type: 3}
   volume: 1
   randomPitch: 1
   pitchRange: {x: 0.95, y: 1.05}
