@@ -6,7 +6,7 @@ using UnityEngine.Serialization;
 [RequireComponent(typeof(EntityController))]
 [RequireComponent(typeof(AnimatorCache))]
 [RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(Collider2D))]
+[RequireComponent(typeof(BoxCollider2D))]
 public class GoombaController : MonoBehaviour, IStompHandler
 {
     private const string SquashTrigger = "squash";
@@ -24,7 +24,7 @@ public class GoombaController : MonoBehaviour, IStompHandler
 
     private EntityController entityController;
     private Rigidbody2D body2D;
-    private Collider2D bodyCollider2D;
+    private BoxCollider2D bodyCollider2D;
     private Animator animatorComponent;
     private AnimatorCache animatorCache;
     private EnemyAudio enemyAudio;
@@ -37,7 +37,7 @@ public class GoombaController : MonoBehaviour, IStompHandler
 
     private EntityController Entity => entityController ? entityController : entityController = GetComponent<EntityController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
-    private Collider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<Collider2D>();
+    private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
     private Animator Animator => animatorComponent ? animatorComponent : animatorComponent = GetComponent<Animator>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
     private EnemyAudio Audio => enemyAudio ? enemyAudio : enemyAudio = GetComponent<EnemyAudio>();

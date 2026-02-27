@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 5843306305454615964}
   m_Layer: 8
   m_Name: supermushroom
-  m_TagString: Untagged
+  m_TagString: RedMushroom
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

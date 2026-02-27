@@ -7,6 +7,21 @@ using System.Collections.Generic;
 [RequireComponent(typeof(BoxCollider2D))]
 public class MarioCollisionHandler : MonoBehaviour
 {
+    private const string EnemyTag = "Enemy";
+    private const string CoinTag = "Coin";
+    private const string FireFlowerTag = "FireFlower";
+    private const string RedMushroomTag = "RedMushroom";
+    private const string StarmanTag = "Starman";
+    private const string OneUpMushroomTag = "OneUpMushroom";
+
+    private const string OneUpToken = "1up";
+    private const string OneUpAltToken = "oneup";
+    private const string RedMushroomToken = "redmushroom";
+    private const string SuperMushroomToken = "supermushroom";
+    private const string FireFlowerToken = "fireflower";
+    private const string StarmanToken = "starman";
+    private const string InvincibilityStarToken = "invincibility star";
+
     [Header("Collectibles")]
     [SerializeField] private UIScript ui;
 
@@ -39,11 +54,13 @@ public class MarioCollisionHandler : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (TryHandleCollectible(collision)) return;
+        if (!IsEnemyCollider(collision)) return;
         HandleEnemyTrigger(collision);
     }
 
     private void OnTriggerStay2D(Collider2D collision)
     {
+        if (!IsEnemyCollider(collision)) return;
         HandleEnemyTrigger(collision);
     }
 
@@ -61,19 +78,13 @@ public class MarioCollisionHandler : MonoBehaviour
 
     private bool TryHandleCollectible(Collider2D collision)
     {
-        if (!collision) return false;
+        if (!collision || IsOwnCollider(collision)) return false;
+        var collectibleObject = ResolveCollectibleObject(collision);
+        var collectibleType = ResolveCollectibleType(collision, collectibleObject);
+        if (collectibleType == CollectibleType.None) return false;
 
-        if (collision.CompareTag("coin"))
-        {
-            GameData.Instance.AddCoin();
-            DespawnCollectible(collision.gameObject);
-            ui?.UpdateUI();
-            return true;
-        }
-
-        if (!collision.CompareTag("1up")) return false;
-        GameData.Instance.AddLife();
-        DespawnCollectible(collision.gameObject);
+        ApplyCollectible(collectibleType);
+        DespawnCollectible(collectibleObject);
         ui?.UpdateUI();
         return true;
     }
@@ -91,6 +102,7 @@ public class MarioCollisionHandler : MonoBehaviour
     {
         if (!Mario || Mario.IsDead) return;
         if (!collision || IsOwnCollider(collision)) return;
+        if (!IsEnemyCollider(collision)) return;
 
         var isStompContact = Body.linearVelocity.y <= stompMaxUpwardVelocity && IsStompContact(collision.bounds);
         TryHandleEnemyContact(collision, isStompContact);
@@ -99,14 +111,13 @@ public class MarioCollisionHandler : MonoBehaviour
     private bool TryHandleEnemyContact(Collider2D collider, bool isStompContact)
     {
         if (!collider) return false;
+        if (!IsEnemyCollider(collider)) return false;
         if (Mario.IsDead) return true;
 
         var cachedHandlers = GetCachedEnemyHandlers(collider);
         var impactHandler = cachedHandlers.ImpactHandler;
         var stompHandler = cachedHandlers.StompHandler;
         var knockbackHandler = cachedHandlers.KnockbackHandler;
-        var isEnemy = IsEnemyCollider(collider);
-        if (!isEnemy && impactHandler == null && stompHandler == null && knockbackHandler == null) return false;
 
         var contactPoint = (Vector2)BodyCollider.bounds.center;
         var sourcePosition = (Vector2)transform.position;
@@ -130,7 +141,6 @@ public class MarioCollisionHandler : MonoBehaviour
             return true;
         }
 
-        if (!isEnemy) return true;
         Mario.TakeDamage();
         return true;
     }
@@ -138,10 +148,10 @@ public class MarioCollisionHandler : MonoBehaviour
     private Collider2D ResolveEnemyCollider(Collision2D collision)
     {
         var primary = collision.collider;
-        if (primary && !IsOwnCollider(primary)) return primary;
+        if (primary && !IsOwnCollider(primary) && IsEnemyCollider(primary)) return primary;
 
         var secondary = collision.otherCollider;
-        if (secondary && !IsOwnCollider(secondary)) return secondary;
+        if (secondary && !IsOwnCollider(secondary) && IsEnemyCollider(secondary)) return secondary;
 
         return null;
     }
@@ -191,7 +201,62 @@ public class MarioCollisionHandler : MonoBehaviour
 
     private static bool IsEnemyCollider(Collider2D collider)
     {
-        return collider.CompareColliderTag("enemy");
+        return collider && collider.CompareColliderTag(EnemyTag);
+    }
+
+    private CollectibleType ResolveCollectibleType(Collider2D collision, GameObject collectibleObject)
+    {
+        if (collision.CompareColliderTag(CoinTag)) return CollectibleType.Coin;
+        if (collision.CompareColliderTag(RedMushroomTag)) return CollectibleType.RedMushroom;
+        if (collision.CompareColliderTag(FireFlowerTag)) return CollectibleType.FireFlower;
+        if (collision.CompareColliderTag(StarmanTag)) return CollectibleType.Starman;
+        if (collision.CompareColliderTag(OneUpMushroomTag)) return CollectibleType.OneUp;
+
+        var lookupObject = collectibleObject ? collectibleObject : collision.gameObject;
+        if (!lookupObject) return CollectibleType.None;
+
+        var normalizedName = lookupObject.name.ToLowerInvariant();
+        if (normalizedName.Contains(OneUpToken) || normalizedName.Contains(OneUpAltToken)) return CollectibleType.OneUp;
+        if (normalizedName.Contains(SuperMushroomToken) || normalizedName.Contains(RedMushroomToken)) return CollectibleType.RedMushroom;
+        if (normalizedName.Contains(FireFlowerToken)) return CollectibleType.FireFlower;
+        if (normalizedName.Contains(InvincibilityStarToken) || normalizedName.Contains(StarmanToken)) return CollectibleType.Starman;
+        if (normalizedName.Contains("coin")) return CollectibleType.Coin;
+        return CollectibleType.None;
+    }
+
+    private static GameObject ResolveCollectibleObject(Collider2D collision)
+    {
+        if (!collision) return null;
+        if (collision.attachedRigidbody) return collision.attachedRigidbody.gameObject;
+        return collision.gameObject;
+    }
+
+    private void ApplyCollectible(CollectibleType collectibleType)
+    {
+        switch (collectibleType)
+        {
+            case CollectibleType.Coin:
+                GameData.Instance.AddCoin();
+                return;
+
+            case CollectibleType.RedMushroom:
+                Mario.SetForm(MarioController.MarioForm.Big);
+                Mario.ActivateSuper();
+                return;
+
+            case CollectibleType.FireFlower:
+                Mario.SetForm(MarioController.MarioForm.Fire);
+                Mario.ActivateSuper();
+                return;
+
+            case CollectibleType.Starman:
+                Mario.ActivateStarPower();
+                return;
+
+            case CollectibleType.OneUp:
+                GameData.Instance.AddLife();
+                return;
+        }
     }
 
     private bool TryResolveImpact(
@@ -265,5 +330,15 @@ public class MarioCollisionHandler : MonoBehaviour
         public IEnemyImpactHandler ImpactHandler;
         public IStompHandler StompHandler;
         public IKnockbackHandler KnockbackHandler;
+    }
+
+    private enum CollectibleType
+    {
+        None = 0,
+        Coin = 1,
+        RedMushroom = 2,
+        FireFlower = 3,
+        Starman = 4,
+        OneUp = 5
     }
 }

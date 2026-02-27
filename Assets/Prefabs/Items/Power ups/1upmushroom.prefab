@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 7463100613222488340}
   m_Layer: 8
   m_Name: 1upmushroom
-  m_TagString: Untagged
+  m_TagString: OneUpMushroom
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

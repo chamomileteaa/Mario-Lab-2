@@ -4,6 +4,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(BoxCollider2D))]
 [RequireComponent(typeof(SpriteFlipper))]
 public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHandler, IKnockbackHandler
 {
@@ -45,7 +46,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
     [SerializeField] private bool allowStarHit = true;
 
     private Rigidbody2D body2D;
-    private Collider2D mainCollider2D;
+    private BoxCollider2D mainCollider2D;
     private Collider2D[] ownColliders;
     private readonly HashSet<int> ownColliderIds = new HashSet<int>(8);
     private SpriteFlipper spriteFlipper;
@@ -57,7 +58,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
     private readonly RaycastHit2D[] aheadHits = new RaycastHit2D[8];
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
-    private Collider2D MainCollider => mainCollider2D ? mainCollider2D : mainCollider2D = GetComponent<Collider2D>();
+    private BoxCollider2D MainCollider => mainCollider2D ? mainCollider2D : mainCollider2D = GetComponent<BoxCollider2D>();
     private Collider2D[] OwnColliders => ownColliders != null && ownColliders.Length > 0
         ? ownColliders
         : ownColliders = GetComponentsInChildren<Collider2D>(true);

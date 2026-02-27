@@ -4,8 +4,12 @@
 TagManager:
   serializedVersion: 3
   tags:
-  - enemy
-  - coin
+  - Enemy
+  - Coin
+  - FireFlower
+  - RedMushroom
+  - Starman
+  - OneUpMushroom
   layers:
   - Default
   - TransparentFX
