@@ -8,6 +8,8 @@ using UnityEngine;
 [RequireComponent(typeof(SpriteFlipper))]
 public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHandler, IKnockbackHandler
 {
+    private const string PlayerTag = "Player";
+
     [Flags]
     public enum TurnMatrix
     {
@@ -252,7 +254,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
     {
         if (!collider) return false;
         if (IsOwnCollider(collider)) return false;
-        if (collider.CompareColliderTag("Player")) return false;
+        if (collider.CompareColliderTag(PlayerTag)) return false;
 
         var otherEntity = ResolveEntityFromCollider(collider);
         if (otherEntity)
@@ -333,7 +335,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
 
     private void FaceMarioIfFound()
     {
-        var mario = GameObject.FindGameObjectWithTag("Player");
+        var mario = GameObject.FindGameObjectWithTag(PlayerTag);
         if (!mario) return;
 
         var delta = mario.transform.position.x - transform.position.x;

@@ -1,11 +1,27 @@
 using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public static class GameInitializer
 {
+    private sealed class CoroutineHost : MonoBehaviour
+    {
+        public Coroutine Run(IEnumerator routine) => StartCoroutine(routine);
+    }
+
+    private const string HostObjectName = "[Game Initializer]";
+    private const bool DefaultUseAsyncPrewarm = true;
+    private const int DefaultPoolPrewarmCount = 2;
+    private const int DefaultPoolCreatesPerFrame = 1;
+
     private static readonly HashSet<int> prewarmedPrefabIds = new HashSet<int>();
+
     private static bool initialized;
+    private static bool useAsyncPrewarm = DefaultUseAsyncPrewarm;
+    private static int poolPrewarmCount = DefaultPoolPrewarmCount;
+    private static int poolCreatesPerFrame = DefaultPoolCreatesPerFrame;
+    private static CoroutineHost host;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void InitializeOnLoad()
@@ -18,9 +34,19 @@ public static class GameInitializer
         if (initialized) return;
         initialized = true;
 
-        PrefabPoolService.ConfigureAutoCreate(true, 128, 2);
+        ApplyPoolDefaults();
         SceneManager.sceneLoaded += OnSceneLoaded;
         PrewarmScenePools();
+    }
+
+    public static void ConfigurePrewarm(bool enableAsync, int targetPoolPrewarmCount = DefaultPoolPrewarmCount, int targetPoolCreatesPerFrame = DefaultPoolCreatesPerFrame)
+    {
+        useAsyncPrewarm = enableAsync;
+        poolPrewarmCount = Mathf.Max(0, targetPoolPrewarmCount);
+        poolCreatesPerFrame = Mathf.Max(1, targetPoolCreatesPerFrame);
+
+        if (!initialized) return;
+        ApplyPoolDefaults();
     }
 
     public static void PrewarmPool(GameObject prefab)
@@ -30,7 +56,7 @@ public static class GameInitializer
 
         var prefabId = prefab.GetInstanceID();
         if (!prewarmedPrefabIds.Add(prefabId)) return;
-        PrefabPoolService.GetOrCreatePool(prefab);
+        StartPrewarm(prefab);
     }
 
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -49,11 +75,48 @@ public static class GameInitializer
             PrewarmPool(brickCoins[i].ScorePopupPrefab);
     }
 
+    private static void StartPrewarm(GameObject prefab)
+    {
+        if (!useAsyncPrewarm)
+        {
+            var pool = PrefabPoolService.GetOrCreatePool(prefab);
+            if (poolPrewarmCount > 0) pool?.Prewarm(poolPrewarmCount);
+            return;
+        }
+
+        Host.Run(PrefabPoolService.PrewarmRoutine(prefab, poolPrewarmCount, poolCreatesPerFrame));
+    }
+
+    private static CoroutineHost Host
+    {
+        get
+        {
+            if (host) return host;
+
+            var hostObject = new GameObject(HostObjectName);
+            Object.DontDestroyOnLoad(hostObject);
+            host = hostObject.AddComponent<CoroutineHost>();
+            return host;
+        }
+    }
+
+    private static void ApplyPoolDefaults()
+    {
+        var autoPrewarmCount = useAsyncPrewarm ? 0 : poolPrewarmCount;
+        PrefabPoolService.ConfigureAutoCreate(true, 128, autoPrewarmCount);
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
+        if (host) Object.Destroy(host.gameObject);
+        host = null;
+
         if (initialized) SceneManager.sceneLoaded -= OnSceneLoaded;
         initialized = false;
+        useAsyncPrewarm = DefaultUseAsyncPrewarm;
+        poolPrewarmCount = DefaultPoolPrewarmCount;
+        poolCreatesPerFrame = DefaultPoolCreatesPerFrame;
         prewarmedPrefabIds.Clear();
     }
 }
