@@ -114,7 +114,7 @@ public class MarioController : MonoBehaviour
     public bool IsCrouching => isGrounded && moveInput.y < CrouchThreshold;
     public Vector2 MoveInput => moveInput;
 
-    private void Awake()
+    private void Start()
     {
         LevelMusic.PlayGroundTheme();
         form = (MarioForm)Mathf.Clamp((int)initialForm, (int)MarioForm.Small, (int)MarioForm.Fire);
