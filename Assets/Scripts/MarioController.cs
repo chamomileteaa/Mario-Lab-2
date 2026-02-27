@@ -668,4 +668,9 @@ public class MarioController : MonoBehaviour
         if (!sceneCamera || !sceneCamera.orthographic) return fallbackCutoffY;
         return sceneCamera.transform.position.y - sceneCamera.orthographicSize - deathOffscreenBuffer;
     }
+    //When mario jumps, the event gets called. Mario Audio hears this.
+    
+    //Jump
+    //Crouch
+    //Throw
 }
