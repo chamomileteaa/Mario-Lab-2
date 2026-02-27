@@ -103,6 +103,7 @@ public class MarioController : MonoBehaviour
     public bool IsSuper => superTimer > 0f;
     public bool IsStarPowered => starPowerTimer > 0f;
     public bool HasStarPower => IsStarPowered;
+    public float StarPowerTimeRemaining => starPowerTimer;
     public bool IsDead => isDead;
     public bool IsGrounded => isGrounded;
     public bool IsDamageInvulnerable => damageInvulnerabilityTimer > 0f;

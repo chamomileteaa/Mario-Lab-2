@@ -189,13 +189,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MarioVisuals
   invulnerabilityMinAlpha: 0.35
   invulnerabilityFlickerSpeed: 18
-  starColorCycleSpeed: 20
-  starColors:
-  - {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  - {r: 0, g: 1, b: 1, a: 1}
-  - {r: 1, g: 0, b: 1, a: 1}
-  - {r: 0, g: 1, b: 0, a: 1}
-  superTint: {r: 1, g: 0.95, b: 0.65, a: 1}
+  useStarPaletteShader: 1
+  starPaletteShader: {fileID: 4800000, guid: 55ee1865682549a4fb7c9e3479d8e3ce, type: 3}
+  starPalettePreset: 0
+  starSlowPhaseSeconds: 2.25
+  starFastFramesPerStep: 4
+  starSlowFramesPerStep: 8
 --- !u!114 &5933504140016293726
 MonoBehaviour:
   m_ObjectHideFlags: 0
