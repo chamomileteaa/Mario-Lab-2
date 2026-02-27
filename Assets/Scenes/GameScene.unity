@@ -16189,6 +16189,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: CastleFlag
       objectReference: {fileID: 0}
+    - target: {fileID: 5037238874723964544, guid: 78350372e505b43f39ebf6d5bb0780d2, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
