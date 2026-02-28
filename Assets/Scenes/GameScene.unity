@@ -232,6 +232,7 @@ GameObject:
   - component: {fileID: 130517431}
   - component: {fileID: 130517433}
   - component: {fileID: 130517432}
+  - component: {fileID: 130517434}
   m_Layer: 0
   m_Name: UpperZone
   m_TagString: Untagged
@@ -298,7 +299,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.13, y: 2.6}
+  m_Size: {x: 2, y: 2.6}
   m_EdgeRadius: 0
 --- !u!114 &130517433
 MonoBehaviour:
@@ -313,6 +314,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PoleZone
   score: 1000
+--- !u!114 &130517434
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 130517430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a65a104ebc9639408996f97c85a24a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlagPoleCalculations
 --- !u!1001 &144285439
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2056,6 +2069,7 @@ GameObject:
   - component: {fileID: 1054585868}
   - component: {fileID: 1054585870}
   - component: {fileID: 1054585869}
+  - component: {fileID: 1054585871}
   m_Layer: 0
   m_Name: BottomZone
   m_TagString: Untagged
@@ -2122,7 +2136,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.13, y: 2.6}
+  m_Size: {x: 2, y: 2.6}
   m_EdgeRadius: 0
 --- !u!114 &1054585870
 MonoBehaviour:
@@ -2137,6 +2151,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PoleZone
   score: 100
+--- !u!114 &1054585871
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1054585867}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a65a104ebc9639408996f97c85a24a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlagPoleCalculations
 --- !u!1001 &1134687226
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2279,6 +2305,7 @@ GameObject:
   - component: {fileID: 1422569134}
   - component: {fileID: 1422569136}
   - component: {fileID: 1422569135}
+  - component: {fileID: 1422569137}
   m_Layer: 0
   m_Name: LowerZone
   m_TagString: Untagged
@@ -2345,7 +2372,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.13, y: 2.6}
+  m_Size: {x: 2, y: 2.6}
   m_EdgeRadius: 0
 --- !u!114 &1422569136
 MonoBehaviour:
@@ -2360,6 +2387,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PoleZone
   score: 400
+--- !u!114 &1422569137
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1422569133}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a65a104ebc9639408996f97c85a24a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlagPoleCalculations
 --- !u!1001 &1555480428
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2428,6 +2467,7 @@ GameObject:
   - component: {fileID: 1692339882}
   - component: {fileID: 1692339884}
   - component: {fileID: 1692339883}
+  - component: {fileID: 1692339885}
   m_Layer: 0
   m_Name: TopZone
   m_TagString: Untagged
@@ -2494,7 +2534,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.13, y: 0.45}
+  m_Size: {x: 2, y: 0.45}
   m_EdgeRadius: 0
 --- !u!114 &1692339884
 MonoBehaviour:
@@ -2509,6 +2549,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PoleZone
   score: 5000
+--- !u!114 &1692339885
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1692339881}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a65a104ebc9639408996f97c85a24a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlagPoleCalculations
 --- !u!1 &1692483603
 GameObject:
   m_ObjectHideFlags: 0
@@ -2520,6 +2572,7 @@ GameObject:
   - component: {fileID: 1692483604}
   - component: {fileID: 1692483606}
   - component: {fileID: 1692483605}
+  - component: {fileID: 1692483607}
   m_Layer: 0
   m_Name: MiddleZone
   m_TagString: Untagged
@@ -2586,7 +2639,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.13, y: 2.6}
+  m_Size: {x: 2, y: 2.6}
   m_EdgeRadius: 0
 --- !u!114 &1692483606
 MonoBehaviour:
@@ -2601,6 +2654,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PoleZone
   score: 800
+--- !u!114 &1692483607
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1692483603}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a65a104ebc9639408996f97c85a24a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlagPoleCalculations
 --- !u!20 &1713993393 stripped
 Camera:
   m_CorrespondingSourceObject: {fileID: 2516342918247294407, guid: b2d1dde066e85774abec6d5daa268332, type: 3}

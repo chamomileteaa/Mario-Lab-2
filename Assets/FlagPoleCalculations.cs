@@ -15,7 +15,7 @@ public class FlagPoleCalculations : MonoBehaviour
     {
         if (!other.CompareTag("Player")) return;
         
-        PoleZone zone = other.GetComponent<PoleZone>();
+        PoleZone zone = GetComponent<PoleZone>();
 
         int score = zone.GoalScore;
         
