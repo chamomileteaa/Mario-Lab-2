@@ -13,9 +13,8 @@ GameObject:
   - component: {fileID: 5335440424140605067}
   - component: {fileID: -960264016823858264}
   - component: {fileID: -7882753709002587208}
-  - component: {fileID: 7681085225579205672}
   m_Layer: 0
-  m_Name: fireflower
+  m_Name: Fireworks
   m_TagString: FireFlower
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -226,16 +225,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e5047c2937e749648a04b7766ef90864, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioPlayer
---- !u!114 &7681085225579205672
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1793668169649356561}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6f7dffe4891d415408a45472a4abf2f5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CollectableAudio
-  collectCue: {fileID: 0}

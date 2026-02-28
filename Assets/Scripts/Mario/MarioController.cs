@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using System;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
@@ -68,9 +69,6 @@ public class MarioController : MonoBehaviour
     [SerializeField, Min(0f)] private float deathOffscreenBuffer = 1f;
     [SerializeField, Min(0.1f)] private float deathFallbackFallDistance = 8f;
 
-    [SerializeField] private MarioAudio marioSFX;
-    [SerializeField] private MusicPlayer LevelMusic;
-
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
     private MarioVisuals marioVisuals;
@@ -117,12 +115,21 @@ public class MarioController : MonoBehaviour
     public bool IsInvincible => IsStarPowered || IsDamageInvulnerable;
     public bool IsCrouching => isGrounded && moveInput.y < CrouchThreshold;
     public Vector2 MoveInput => moveInput;
+    public event Action Spawned;
+    public event Action Jumped;
+    public event Action<MarioForm, MarioForm> FormChanged;
+    public event Action CoinCollected;
+    public event Action EnemyStomped;
+    public event Action Damaged;
+    public event Action ExtraLifeCollected;
+    public event Action<bool> StarPowerChanged;
+    public event Action Died;
 
     private void Start()
     {
-        LevelMusic.PlayGroundTheme();
         form = (MarioForm)Mathf.Clamp((int)initialForm, (int)MarioForm.Small, (int)MarioForm.Fire);
         ApplySmallCollider();
+        Spawned?.Invoke();
 
         if (form == MarioForm.Small) return;
         pendingGrow = true;
@@ -183,6 +190,7 @@ public class MarioController : MonoBehaviour
         }
 
         SetForm((MarioForm)((int)form - 1));
+        Damaged?.Invoke();
         damageInvulnerabilityTimer = damageInvulnerabilityTime;
     }
 
@@ -195,6 +203,7 @@ public class MarioController : MonoBehaviour
     {
         if (isDead) return;
 
+        var previousForm = form;
         targetForm = (MarioForm)Mathf.Clamp((int)targetForm, (int)MarioForm.Small, (int)MarioForm.Fire);
         if (targetForm == form) return;
 
@@ -213,6 +222,7 @@ public class MarioController : MonoBehaviour
 
         form = targetForm;
         Visuals?.PlayFormTransition(grew);
+        FormChanged?.Invoke(previousForm, form);
         StartFormTransitionPause(grew);
     }
 
@@ -227,8 +237,20 @@ public class MarioController : MonoBehaviour
     {
         var targetDuration = duration < 0f ? defaultStarPowerDuration : duration;
         if (targetDuration <= 0f) return;
-        LevelMusic.PlayInvincibilityCue();
+        var wasStarPowered = IsStarPowered;
         starPowerTimer = Mathf.Max(starPowerTimer, targetDuration);
+        if (!wasStarPowered && IsStarPowered)
+            StarPowerChanged?.Invoke(true);
+    }
+
+    public void NotifyExtraLifeCollected()
+    {
+        ExtraLifeCollected?.Invoke();
+    }
+
+    public void NotifyCoinCollected()
+    {
+        CoinCollected?.Invoke();
     }
 
     public void ApplyEnemyStompBounce(float bounceSpeed)
@@ -238,6 +260,7 @@ public class MarioController : MonoBehaviour
         Body.linearVelocity = velocity;
         coyoteTimer = 0f;
         jumpBufferTimer = 0f;
+        EnemyStomped?.Invoke();
     }
 
     private void UpdateInputState()
@@ -269,16 +292,12 @@ public class MarioController : MonoBehaviour
         damageInvulnerabilityTimer = Mathf.Max(0f, damageInvulnerabilityTimer - Time.deltaTime);
         if (PauseService.IsPaused(PauseType.Physics)) return;
 
-        float previousStar = starPowerTimer;
+        var previousStar = starPowerTimer;
         starPowerTimer = Mathf.Max(0f, starPowerTimer - Time.deltaTime);
-
-        if (previousStar > 0f && starPowerTimer == 0f)
-        {
-            LevelMusic.PlayGroundTheme();
-        }
 
         formProtectionTimer = Mathf.Max(0f, formProtectionTimer - Time.deltaTime);
-        starPowerTimer = Mathf.Max(0f, starPowerTimer - Time.deltaTime);
+        if (previousStar > 0f && starPowerTimer <= 0f)
+            StarPowerChanged?.Invoke(false);
     }
 
     private void TryStartJump()
@@ -288,7 +307,7 @@ public class MarioController : MonoBehaviour
         jumpBufferTimer = 0f;
         coyoteTimer = 0f;
 
-        marioSFX.PlayJump();
+        Jumped?.Invoke();
         var velocity = Body.linearVelocity;
         if (velocity.y < 0f) velocity.y = 0f;
         velocity.y = jumpSpeed;
@@ -365,7 +384,7 @@ public class MarioController : MonoBehaviour
         if (isDead) return;
 
         StopFormTransitionSequence();
-        LevelMusic.PlayDeathCue();
+        Died?.Invoke();
 
         isDead = true;
         pendingGrow = false;
@@ -431,6 +450,7 @@ public class MarioController : MonoBehaviour
         pendingGrow = false;
         form = pendingGrowForm;
         Visuals?.PlayFormTransition(true);
+        FormChanged?.Invoke(MarioForm.Small, form);
         StartFormTransitionPause(true);
     }
 

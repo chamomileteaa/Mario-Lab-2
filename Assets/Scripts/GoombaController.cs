@@ -22,8 +22,6 @@ public class GoombaController : MonoBehaviour, IStompHandler
     [SerializeField] private bool defeatWhenKnockedBack = true;
     [SerializeField, Min(0.5f)] private float despawnBelowSpawnDistance = 12f;
 
-    [SerializeField] private EnemyAudio enemySFX;
-
     private EntityController entityController;
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
@@ -50,8 +48,6 @@ public class GoombaController : MonoBehaviour, IStompHandler
         spawnY = transform.position.y;
         initialGravityScale = Body.gravityScale;
         initialTag = gameObject.tag;
-
-        enemySFX = GetComponent<EnemyAudio>();
     }
 
     private void OnEnable()
@@ -98,7 +94,7 @@ public class GoombaController : MonoBehaviour, IStompHandler
         SetDefeatedState();
         squished = true;
         
-        enemySFX.PlayDeath();
+        Audio?.PlayDeath();
 
         Entity.SetMovementEnabled(false);
         Body.linearVelocity = Vector2.zero;

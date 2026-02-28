@@ -82,8 +82,6 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
     public event Action<EntityController> KnockbackApplied;
     public event Action<EntityController, EnemyImpactType> KnockbackAppliedWithType;
     public bool IsKnockedBack => knockedAway;
-    [Obsolete("Use IsKnockedBack instead.")]
-    public bool IsKnockedAway => IsKnockedBack;
 
     private void Awake()
     {
@@ -196,9 +194,6 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
             return false;
         return TryKnockAway(context.SourcePosition, impactType);
     }
-
-    [Obsolete("Use TryHandleKnockback(in EnemyImpactContext) instead.")]
-    public bool TryKnockAway(Vector2 origin) => TryKnockAway(origin, EnemyImpactType.Knockback);
 
     private bool TryKnockAway(Vector2 origin, EnemyImpactType impactType)
     {

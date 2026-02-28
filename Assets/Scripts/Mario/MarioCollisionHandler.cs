@@ -32,7 +32,6 @@ public class MarioCollisionHandler : MonoBehaviour
     [SerializeField, Min(0f)] private float stompContactPointTolerance = 0.08f;
     [SerializeField, Min(0f)] private float stompSideTolerance = 0.18f;
     [SerializeField, Min(0f)] private float stompMaxUpwardVelocity = 0.75f;
-    [SerializeField] private MarioAudio CollectableSFX;
 
     private MarioController marioController;
     private Rigidbody2D body2D;
@@ -260,17 +259,16 @@ public class MarioCollisionHandler : MonoBehaviour
         {
             case CollectibleType.Coin:
                 GameData.Instance.AddCoin();
+                Mario.NotifyCoinCollected();
                 return;
 
             case CollectibleType.RedMushroom:
                 Mario.SetForm(MarioController.MarioForm.Big);
-                CollectableSFX.PlayGrow();
                 Mario.ActivateFormProtection();
                 return;
 
             case CollectibleType.FireFlower:
                 Mario.SetForm(MarioController.MarioForm.Fire);
-                CollectableSFX.PlayGrow();
                 Mario.ActivateFormProtection();
                 return;
 
@@ -279,7 +277,7 @@ public class MarioCollisionHandler : MonoBehaviour
                 return;
 
             case CollectibleType.OneUp:
-                CollectableSFX.PlayLifeUp();
+                Mario.NotifyExtraLifeCollected();
                 GameData.Instance.AddLife();
                 return;
         }

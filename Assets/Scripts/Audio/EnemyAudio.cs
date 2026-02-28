@@ -1,18 +1,12 @@
 using UnityEngine;
 
-public class EnemyAudio : MonoBehaviour
+[DisallowMultipleComponent]
+public class EnemyAudio : AudioPlayer
 {
-    [SerializeField] private AudioPlayer audioPlayer;
-    [SerializeField] private AudioCue deathCue;
+    [SerializeField] private AudioClip deathClip;
 
-    public void Awake()
-    {
-        audioPlayer = GetComponent<AudioPlayer>();
-    }
     public void PlayDeath()
     {
-        if (!audioPlayer || !deathCue) return;
-        audioPlayer.Play(deathCue);
-        Debug.Log("Play Death Enemy");
+        PlayOneShot(deathClip);
     }
 }
