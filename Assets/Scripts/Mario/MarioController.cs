@@ -81,6 +81,8 @@ public class MarioController : MonoBehaviour
     private bool isGrounded;
     private bool isDead;
     private bool pendingGrow;
+    private bool isWinning;
+    private Coroutine winRoutine;
     private float coyoteTimer;
     private float jumpBufferTimer;
     private float damageInvulnerabilityTimer;
@@ -106,6 +108,7 @@ public class MarioController : MonoBehaviour
     private Camera SceneCamera => sceneCamera ? sceneCamera : sceneCamera = Camera.main;
     private CameraController SceneCameraController => SceneCamera ? SceneCamera.GetComponent<CameraController>() : null;
 
+    public bool IsWinning => isWinning;
     public MarioForm Form => form;
     public bool IsSmall => form == MarioForm.Small;
     public bool IsFormProtected => formProtectionTimer > 0f;
@@ -171,7 +174,7 @@ public class MarioController : MonoBehaviour
 
     private void Update()
     {
-        if (isDead) return;
+        if (isDead || isWinning) return;
 
         UpdateInputState();
         UpdateGroundState();
@@ -650,5 +653,54 @@ public class MarioController : MonoBehaviour
         var found = FindFirstObjectByType<GameData>(FindObjectsInactive.Include);
         if (found && !GameData.Instance) GameData.Instance = found;
         return found;
+    }
+
+    public void StartVictoryScreen(Transform poleTransform)
+    {
+        if (isDead || isWinning) return;
+
+        moveInput = Vector2.zero;
+        jumpHeld = false;
+        jumpBufferTimer = 0f;
+        coyoteTimer = 0f;
+        
+        if (winRoutine != null) StopCoroutine(winRoutine);
+
+        winRoutine = StartCoroutine(WinSequence(poleTransform));
+    }
+
+    private IEnumerator WinSequence(Transform poleTransform)
+    {
+        //Add win theme
+        
+        Vector3 pos = transform.position;
+        pos.x = poleTransform.position.x;
+        transform.position = pos;
+        
+        float slideSpeed = 3f;
+        
+        while (transform.position.y > poleTransform.position.y - 3.5f)
+        {
+            transform.position += Vector3.down * slideSpeed * Time.deltaTime;
+            yield return null;
+        }
+        
+        yield return new WaitForSeconds(0.5f);
+        
+        Body.simulated = true;
+
+        float walkSpeed = 3f;
+        float walkTime = 2.5f;
+        float timer = 0f;
+
+        while (timer < walkTime)
+        {
+            Body.linearVelocity = new Vector2(walkSpeed, Body.linearVelocity.y);
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        SceneManager.LoadScene("MainMenuScene");
+
     }
 }
