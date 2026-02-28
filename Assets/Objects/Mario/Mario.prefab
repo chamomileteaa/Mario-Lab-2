@@ -154,6 +154,8 @@ MonoBehaviour:
   acceleration: 30
   deceleration: 10
   airControlMultiplier: 0.85
+  skidMinSpeed: 3
+  skidCooldown: 0.12
   jumpHeight:
     min: 2.4
     max: 5
@@ -372,6 +374,7 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 7bf01d4a81b7d614bb8cafca38c3796f, type: 3}
     - {fileID: 8300000, guid: bfc45c710e1e4474eb3f35c55711184e, type: 3}
     - {fileID: 8300000, guid: c98abe34075bd944cb992ce5703de148, type: 3}
+  shortJumpDecisionWindow: 0.08
 --- !u!82 &1854913323650572181
 AudioSource:
   m_ObjectHideFlags: 0
