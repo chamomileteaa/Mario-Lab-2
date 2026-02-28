@@ -11,6 +11,7 @@ public class PowerupController : MonoBehaviour
 
     private Rigidbody2D body2D;
     private EntityController entityController;
+    private PowerupAudio powerupAudio;
     private SpriteRenderer[] spriteRenderers;
     private Collider2D[] ownColliders;
     private SortingState[] sortingStates;
@@ -18,9 +19,11 @@ public class PowerupController : MonoBehaviour
 
     private Coroutine riseRoutine;
     private float cachedGravityScale;
+    private bool brickSpawnPrepared;
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
     private EntityController Entity => entityController ? entityController : entityController = GetComponent<EntityController>();
+    private PowerupAudio Audio => powerupAudio ? powerupAudio : powerupAudio = GetComponent<PowerupAudio>();
     private SpriteRenderer[] Sprites => spriteRenderers != null && spriteRenderers.Length > 0
         ? spriteRenderers
         : spriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
@@ -30,14 +33,24 @@ public class PowerupController : MonoBehaviour
 
     private void OnDisable()
     {
+        brickSpawnPrepared = false;
         CancelRiseAndRestore();
+    }
+
+    public void PrepareBrickSpawn()
+    {
+        brickSpawnPrepared = true;
     }
 
     public void BeginRising(SpriteRenderer blockRenderer)
     {
+        if (!brickSpawnPrepared) return;
+        brickSpawnPrepared = false;
+
         if (riseRoutine != null)
             StopCoroutine(riseRoutine);
 
+        Audio?.PlaySpawn();
         riseRoutine = StartCoroutine(RiseRoutine(blockRenderer));
     }
 

@@ -23,12 +23,10 @@ public static class GameInitializer
     private static int poolCreatesPerFrame = DefaultPoolCreatesPerFrame;
     private static CoroutineHost host;
     private static Coroutine scenePrewarmRoutine;
+    private static PoolPrewarmConfig prewarmConfig;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void InitializeOnLoad()
-    {
-        Initialize();
-    }
+    private static void InitializeOnLoad() => Initialize();
 
     private static void Initialize()
     {
@@ -65,17 +63,6 @@ public static class GameInitializer
         ScheduleScenePoolPrewarm();
     }
 
-    private static void PrewarmScenePools()
-    {
-        var goombas = Object.FindObjectsByType<GoombaController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (var i = 0; i < goombas.Length; i++)
-            PrewarmPool(goombas[i].ScorePopupPrefab);
-
-        var brickCoins = Object.FindObjectsByType<BrickCoin>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (var i = 0; i < brickCoins.Length; i++)
-            PrewarmPool(brickCoins[i].ScorePopupPrefab);
-    }
-
     private static void ScheduleScenePoolPrewarm()
     {
         if (scenePrewarmRoutine != null)
@@ -86,10 +73,30 @@ public static class GameInitializer
 
     private static IEnumerator PrewarmScenePoolsNextFrame()
     {
-        // Defer scene scan/prewarm work so first rendered frame is not blocked.
+        // Defer prewarm work so first rendered frame is not blocked.
         yield return null;
-        PrewarmScenePools();
+
+        var config = ResolvePrewarmConfig();
+        if (!config)
+        {
+            scenePrewarmRoutine = null;
+            yield break;
+        }
+
+        PrewarmPool(config.ScorePopupPrefab);
+
+        // Split work across frames to reduce startup spikes.
+        yield return null;
+
+        PrewarmPool(config.FireballPrefab);
+
         scenePrewarmRoutine = null;
+    }
+
+    private static PoolPrewarmConfig ResolvePrewarmConfig()
+    {
+        prewarmConfig ??= Object.FindFirstObjectByType<PoolPrewarmConfig>(FindObjectsInactive.Include);
+        return prewarmConfig;
     }
 
     private static void StartPrewarm(GameObject prefab)
@@ -129,6 +136,7 @@ public static class GameInitializer
         if (host) Object.Destroy(host.gameObject);
         host = null;
         scenePrewarmRoutine = null;
+        prewarmConfig = null;
 
         if (initialized) SceneManager.sceneLoaded -= OnSceneLoaded;
         initialized = false;

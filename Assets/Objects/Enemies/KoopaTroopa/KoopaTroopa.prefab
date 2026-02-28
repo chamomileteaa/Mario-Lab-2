@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 747627246193794841}
   - component: {fileID: 5383774017241173048}
   - component: {fileID: 3643931151868295503}
+  - component: {fileID: 4072611737549705605}
   m_Layer: 11
   m_Name: KoopaTroopa
   m_TagString: Enemy
@@ -161,3 +162,28 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 0.18, y: 0.19}
   m_EdgeRadius: 0
+--- !u!114 &4072611737549705605
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4133034876165275223}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63a594d84f8640e1a74bb5bb69c8ce05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KoopaTroopaAudio
+  cues:
+    keys:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    values:
+    - {fileID: 8300000, guid: 32301e88d52f6354ca5e3943668db218, type: 3}
+    - {fileID: 8300000, guid: a33dc37755d04994898cd2ad8cfd40cf, type: 3}
+    - {fileID: 8300000, guid: bfc45c710e1e4474eb3f35c55711184e, type: 3}
+    - {fileID: 8300000, guid: fb46b75cd0143fe428615f3cc7ccf5ed, type: 3}
+    - {fileID: 8300000, guid: bfc45c710e1e4474eb3f35c55711184e, type: 3}

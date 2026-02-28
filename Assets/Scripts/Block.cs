@@ -185,8 +185,10 @@ public class Block : MonoBehaviour
 
         var blockBounds = BoxCollider.bounds;
         const float sideInset = 0.02f;
-        if (marioBounds.center.x <= blockBounds.min.x + sideInset) return false;
-        if (marioBounds.center.x >= blockBounds.max.x - sideInset) return false;
+        var allowedMinX = blockBounds.min.x + sideInset;
+        var allowedMaxX = blockBounds.max.x - sideInset;
+        if (marioBounds.max.x <= allowedMinX) return false;
+        if (marioBounds.min.x >= allowedMaxX) return false;
 
         const float minHeadGap = -0.3f;
         const float maxHeadGap = 0.3f;
@@ -511,6 +513,7 @@ public class Block : MonoBehaviour
         if (!riseController)
             riseController = spawned.AddComponent<PowerupController>();
 
+        riseController.PrepareBrickSpawn();
         riseController.BeginRising(Sprite);
     }
 

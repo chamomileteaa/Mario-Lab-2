@@ -53,7 +53,7 @@ MonoBehaviour:
   scoreValue: 200
   scorePopupPrefab: {fileID: 6309700172672840609, guid: d6ea739a175e8df4d8832834f03bdd80, type: 3}
   scorePopupOffset: {x: 0, y: 0.35, z: 0}
-  collectCue: {fileID: 11400000, guid: e190d7568123613438ab78b89ece7e02, type: 2}
+  collectClip: {fileID: 8300000, guid: 42bc9b878ece3d346bf66224ffc4a47b, type: 3}
 --- !u!212 &7053474065143176492
 SpriteRenderer:
   serializedVersion: 2
@@ -101,7 +101,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: -1
   m_MaskInteraction: 0
   m_Sprite: {fileID: 8391431092616798930, guid: fc4890d02bb8a0346b85cab08dfd6ca2, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}

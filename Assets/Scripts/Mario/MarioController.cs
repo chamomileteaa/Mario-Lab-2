@@ -34,6 +34,8 @@ public class MarioController : MonoBehaviour
     [SerializeField, Min(0f)] private float acceleration = 30f;
     [SerializeField, Min(0f)] private float deceleration = 10f;
     [SerializeField, Range(0f, 1f)] private float airControlMultiplier = 0.85f;
+    [SerializeField, Min(0f)] private float skidMinSpeed = 3f;
+    [SerializeField, Min(0f)] private float skidCooldown = 0.12f;
 
     [Header("Jump")]
     [SerializeField, MinMaxInt(0.1f, 8f)] private MinMaxFloat jumpHeight = new MinMaxFloat(2.4f, 4f);
@@ -86,6 +88,7 @@ public class MarioController : MonoBehaviour
     private float starPowerTimer;
     private float jumpSpeed;
     private float shortJumpSpeed;
+    private float lastSkidTime = -999f;
     private MarioForm form;
     private MarioForm pendingGrowForm;
     private Coroutine deathRoutine;
@@ -114,6 +117,9 @@ public class MarioController : MonoBehaviour
     public bool IsDamageInvulnerable => damageInvulnerabilityTimer > 0f;
     public bool IsInvincible => IsStarPowered || IsDamageInvulnerable;
     public bool IsCrouching => isGrounded && moveInput.y < CrouchThreshold;
+    public bool IsJumpHeld => jumpHeld;
+    public float VerticalSpeed => Body.linearVelocity.y;
+    public float FullJumpTakeoffSpeed => jumpSpeed;
     public Vector2 MoveInput => moveInput;
     public event Action Spawned;
     public event Action Jumped;
@@ -122,6 +128,10 @@ public class MarioController : MonoBehaviour
     public event Action EnemyStomped;
     public event Action Damaged;
     public event Action ExtraLifeCollected;
+    public event Action FireballShot;
+    public event Action PipeTravelled;
+    public event Action Skidded;
+    public event Action Kicked;
     public event Action<bool> StarPowerChanged;
     public event Action Died;
 
@@ -253,6 +263,21 @@ public class MarioController : MonoBehaviour
         CoinCollected?.Invoke();
     }
 
+    public void NotifyFireballShot()
+    {
+        FireballShot?.Invoke();
+    }
+
+    public void NotifyPipeTravelled()
+    {
+        PipeTravelled?.Invoke();
+    }
+
+    public void NotifyKicked()
+    {
+        Kicked?.Invoke();
+    }
+
     public void ApplyEnemyStompBounce(float bounceSpeed)
     {
         var velocity = Body.linearVelocity;
@@ -325,6 +350,15 @@ public class MarioController : MonoBehaviour
 
         if (Mathf.Abs(inputX) > InputDeadzone)
         {
+            if (isGrounded &&
+                Mathf.Abs(currentSpeedX) >= skidMinSpeed &&
+                Mathf.Sign(currentSpeedX) != Mathf.Sign(inputX) &&
+                Time.time >= lastSkidTime + skidCooldown)
+            {
+                lastSkidTime = Time.time;
+                Skidded?.Invoke();
+            }
+
             var targetX = inputX * maxMoveSpeed;
             velocity.x = Mathf.MoveTowards(currentSpeedX, targetX, acceleration * control * Time.fixedDeltaTime);
         }

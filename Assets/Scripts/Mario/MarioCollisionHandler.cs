@@ -14,15 +14,6 @@ public class MarioCollisionHandler : MonoBehaviour
     private const string StarmanTag = "Starman";
     private const string OneUpMushroomTag = "OneUpMushroom";
 
-    private const string OneUpToken = "1up";
-    private const string OneUpAltToken = "oneup";
-    private const string RedMushroomToken = "redmushroom";
-    private const string SuperMushroomToken = "supermushroom";
-    private const string FireFlowerToken = "fireflower";
-    private const string StarmanToken = "starman";
-    private const string InvincibilityStarToken = "invincibility star";
-    private const string CoinToken = "coin";
-
     [Header("Collectibles")]
     [SerializeField] private UIScript ui;
 
@@ -237,12 +228,8 @@ public class MarioCollisionHandler : MonoBehaviour
         var lookupObject = collectibleObject ? collectibleObject : collision.gameObject;
         if (!lookupObject) return CollectibleType.None;
 
-        var normalizedName = lookupObject.name.ToLowerInvariant();
-        if (normalizedName.Contains(OneUpToken) || normalizedName.Contains(OneUpAltToken)) return CollectibleType.OneUp;
-        if (normalizedName.Contains(SuperMushroomToken) || normalizedName.Contains(RedMushroomToken)) return CollectibleType.RedMushroom;
-        if (normalizedName.Contains(FireFlowerToken)) return CollectibleType.FireFlower;
-        if (normalizedName.Contains(InvincibilityStarToken) || normalizedName.Contains(StarmanToken)) return CollectibleType.Starman;
-        if (normalizedName.Contains(CoinToken)) return CollectibleType.Coin;
+        if (lookupObject.TryGetComponent<BrickCoin>(out _)) return CollectibleType.Coin;
+
         return CollectibleType.None;
     }
 

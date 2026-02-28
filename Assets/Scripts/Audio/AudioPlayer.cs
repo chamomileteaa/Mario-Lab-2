@@ -5,7 +5,24 @@ using UnityEngine;
 public class AudioPlayer : MonoBehaviour
 {
     private AudioSource source;
-    public AudioSource Source => source ? source : source = GetComponent<AudioSource>();
+    public AudioSource Source
+    {
+        get
+        {
+            if (!source)
+                source = GetComponent<AudioSource>();
+
+            if (!source)
+            {
+                source = gameObject.AddComponent<AudioSource>();
+                source.playOnAwake = false;
+                source.spatialBlend = 0f;
+                source.loop = false;
+            }
+
+            return source;
+        }
+    }
 
     public void PlayOneShot(AudioClip clip, float volume = 1f, float pitch = 1f)
     {
