@@ -4,6 +4,7 @@ using System.Collections;
 public class FlagTrigger : MonoBehaviour
 {
     public Animator flagAnimator;
+    public bool triggersFireworks = false; // check this only on the green flag
     public GameObject fireworkPrefab;
     public Transform fireworksSpawnPoint;
     public UIScript uiScript;
@@ -28,18 +29,21 @@ public class FlagTrigger : MonoBehaviour
             if (HasParameter("isTriggered", playerAnimator))
                 playerAnimator.SetBool("isTriggered", true);
 
-            if (HasParameter("isTriggered", flagAnimator))
+            if (flagAnimator != null && HasParameter("isTriggered", flagAnimator))
                 flagAnimator.SetBool("isTriggered", true);
 
-            int lastDigit = (int)Mathf.Ceil(uiScript.timeLeft) % 10;
+            if (triggersFireworks)
+            {
+                int lastDigit = (int)Mathf.Ceil(uiScript.timeLeft) % 10;
 
-            int fireworkCount = 0;
-            if (lastDigit == 1) fireworkCount = 1;
-            else if (lastDigit == 3) fireworkCount = 3;
-            else if (lastDigit == 6) fireworkCount = 6;
+                int fireworkCount = 0;
+                if (lastDigit == 1) fireworkCount = 1;
+                else if (lastDigit == 3) fireworkCount = 3;
+                else if (lastDigit == 6) fireworkCount = 6;
 
-            if (fireworkCount > 0)
-                StartCoroutine(SpawnFireworks(fireworkCount));
+                if (fireworkCount > 0)
+                    StartCoroutine(SpawnFireworks(fireworkCount));
+            }
         }
     }
 

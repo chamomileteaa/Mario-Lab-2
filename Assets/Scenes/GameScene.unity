@@ -866,7 +866,11 @@ PrefabInstance:
     - target: {fileID: 1832186991767862819, guid: 2ef7a46b0b13d418ebbcbbddec211c2c, type: 3}
       propertyPath: fireworkPrefab
       value: 
-      objectReference: {fileID: 581654646119451293, guid: 81be068f2ed9a7345b1825ff6ed62e28, type: 3}
+      objectReference: {fileID: 4307456546659934522, guid: 10970763216e34e4c90291083da77ea5, type: 3}
+    - target: {fileID: 1832186991767862819, guid: 2ef7a46b0b13d418ebbcbbddec211c2c, type: 3}
+      propertyPath: triggersFireworks
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1832186991767862819, guid: 2ef7a46b0b13d418ebbcbbddec211c2c, type: 3}
       propertyPath: fireworksSpawnPoint
       value: 
@@ -1254,7 +1258,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 52422375666345885, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 193
       objectReference: {fileID: 0}
     - target: {fileID: 52422375666345885, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       propertyPath: m_LocalPosition.y
