@@ -69,6 +69,10 @@ public static class GameInitializer
         var goombas = Object.FindObjectsByType<GoombaController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (var i = 0; i < goombas.Length; i++)
             PrewarmPool(goombas[i].ScorePopupPrefab);
+        
+        var koopas = Object.FindObjectsByType<KoopaController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (var i = 0; i < koopas.Length; i++)
+            PrewarmPool(koopas[i].ScorePopupPrefab);
 
         var brickCoins = Object.FindObjectsByType<BrickCoin>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (var i = 0; i < brickCoins.Length; i++)
