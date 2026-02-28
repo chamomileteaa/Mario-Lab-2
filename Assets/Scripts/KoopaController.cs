@@ -93,7 +93,20 @@ public class KoopaController : MonoBehaviour, IStompHandler
     public bool TryHandleStomp(in EnemyImpactContext context)
     {
         if (defeated) return false;
-        SquishedOnce();
+        if (!inShell)
+        {
+            SquishedOnce();
+            inShell = true;
+        }
+        else
+        {
+            if (squishRoutine != null)
+            {
+                StopCoroutine(squishRoutine);
+                squishRoutine = null;
+            }
+            SquishedTwice();
+        }
         return true;
     }
     
@@ -109,11 +122,42 @@ public class KoopaController : MonoBehaviour, IStompHandler
         Body.linearVelocity = Vector2.zero;
         Body.gravityScale = 0f;
         Body.simulated = false;
-        BodyCollider.enabled = false;
+        BodyCollider.enabled = true;
 
         TriggerSquishAnimation();
+        inShell = true;
         //SpawnScorePopup();
+
+        StartCoroutine(ChangeColliderstate(0.1f));
         squishRoutine = StartCoroutine(IdleShellState(squishDuration)); // Except for Despawning, 
+        
+    }
+
+    private IEnumerator ChangeColliderstate(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        squishRoutine = null;
+        squished = false;
+        Body.gravityScale = initialGravityScale;
+        Body.simulated = true;
+        BodyCollider.enabled = true;
+        Body.angularVelocity = 0f;
+    }
+    
+    private void SquishedTwice()
+    {
+        if (defeated) return;
+        squished = true;
+
+        Entity.SetMovementEnabled(true);
+        Body.linearVelocity = Vector2.zero;
+        Body.gravityScale = initialGravityScale;
+        Body.simulated = true;
+        BodyCollider.enabled = true;
+        Entity.SetMovementEnabled(true);
+        Body.angularVelocity = 0f;
+        inShell = false;
+        
     }
     
     private void TriggerSquishAnimation()
@@ -145,12 +189,10 @@ public class KoopaController : MonoBehaviour, IStompHandler
         Audio?.PlayDeath();
     }
     
-    //Make IEnumerator function that 
 
     private IEnumerator IdleShellState(float delay)
     {
         yield return new WaitForSeconds(delay);
-        //PrefabPoolService.Despawn(gameObject);
         squishRoutine = null;
         
         ResetAnimationState();
@@ -163,7 +205,7 @@ public class KoopaController : MonoBehaviour, IStompHandler
         Body.gravityScale = initialGravityScale;
         BodyCollider.enabled = true;
         Body.angularVelocity = 0f;
-        
+        inShell = false;
     }
     
     private IEnumerator DespawnAfter(float delay)
