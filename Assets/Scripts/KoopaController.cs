@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -39,6 +40,7 @@ public class KoopaController : MonoBehaviour, IStompHandler
     private bool defeated;
     private bool squished;
     private bool inShell;
+    private bool shellMoving;
     
     private EntityController Entity => entityController ? entityController : entityController = GetComponent<EntityController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
@@ -74,7 +76,7 @@ public class KoopaController : MonoBehaviour, IStompHandler
     
     private void OnDisable()
     {
-        Entity.KnockbackAppliedWithType -= OnEntityKnockedBack;
+        //Entity.KnockbackAppliedWithType -= OnEntityKnockedBack;
 
         if (squishRoutine == null) return;
         StopCoroutine(squishRoutine);
@@ -96,68 +98,67 @@ public class KoopaController : MonoBehaviour, IStompHandler
         if (!inShell)
         {
             SquishedOnce();
-            inShell = true;
+        }
+        else if (!shellMoving)
+        {
+            SquishedTwice();
         }
         else
         {
-            if (squishRoutine != null)
-            {
-                StopCoroutine(squishRoutine);
-                squishRoutine = null;
-            }
-            SquishedTwice();
+            StopShell();
         }
+
         return true;
     }
     
     private void SquishedOnce()
     {
         if (defeated) return;
-        //SetDefeatedState();
+        
         squished = true;
+        inShell = true;
+        shellMoving = false;
         
         enemySFX.PlayDeath();
 
         Entity.SetMovementEnabled(false);
+        gameObject.tag = "Untagged";
+
         Body.linearVelocity = Vector2.zero;
-        Body.gravityScale = 0f;
+        Body.gravityScale = 0;
         Body.simulated = false;
-        BodyCollider.enabled = true;
+        
+        BodyCollider.enabled = false;
 
         TriggerSquishAnimation();
-        inShell = true;
-        //SpawnScorePopup();
 
-        StartCoroutine(ChangeColliderstate(0.1f));
-        squishRoutine = StartCoroutine(IdleShellState(squishDuration)); // Except for Despawning, 
+        //gameObject.tag = "Untagged";
+
+        if (squishRoutine != null)
+        {
+            StopCoroutine(squishRoutine);
+        }
+        squishRoutine = StartCoroutine(IdleShellState(squishDuration));
         
     }
-
-    private IEnumerator ChangeColliderstate(float duration)
-    {
-        yield return new WaitForSeconds(duration);
-        squishRoutine = null;
-        squished = false;
-        Body.gravityScale = initialGravityScale;
-        Body.simulated = true;
-        BodyCollider.enabled = true;
-        Body.angularVelocity = 0f;
-    }
+    
     
     private void SquishedTwice()
     {
         if (defeated) return;
-        squished = true;
-
-        Entity.SetMovementEnabled(true);
-        Body.linearVelocity = Vector2.zero;
-        Body.gravityScale = initialGravityScale;
-        Body.simulated = true;
-        BodyCollider.enabled = true;
-        Entity.SetMovementEnabled(true);
-        Body.angularVelocity = 0f;
-        inShell = false;
+        shellMoving = true;
+        inShell = true;
         
+        Entity.SetMovementEnabled(true);
+
+    }
+
+    private void StopShell()
+    {
+
+        shellMoving = false;
+        Entity.SetMovementEnabled(false);
+        Body.linearVelocity = Vector2.zero;
     }
     
     private void TriggerSquishAnimation()
@@ -205,15 +206,10 @@ public class KoopaController : MonoBehaviour, IStompHandler
         Body.gravityScale = initialGravityScale;
         BodyCollider.enabled = true;
         Body.angularVelocity = 0f;
+        gameObject.tag = initialTag;
         inShell = false;
     }
     
-    private IEnumerator DespawnAfter(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        PrefabPoolService.Despawn(gameObject);
-        squishRoutine = null;
-    }
 
     private void SpawnScorePopup()
     {
@@ -224,7 +220,7 @@ public class KoopaController : MonoBehaviour, IStompHandler
         if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
             popup.Show(stompScore, worldPosition);
     }
-    
-    
+
+
     
 }
