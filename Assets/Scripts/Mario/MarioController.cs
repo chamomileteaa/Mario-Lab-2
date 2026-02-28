@@ -21,6 +21,8 @@ public class MarioController : MonoBehaviour
     private const float InputDeadzone = 0.01f;
     private const float CrouchThreshold = -0.5f;
     private const float MinDeathBounceSpeed = 11f;
+    private const string FireThrowTrigger = "throw";
+    private const string FireActionName = "Attack";
     private const PauseType MarioPauseBypassTypes = PauseType.Physics | PauseType.Animation;
     private const PauseType MarioFormPauseBypassTypes = PauseType.Animation;
     private const PauseType GameplayPauseTypes = PauseType.Physics | PauseType.Animation | PauseType.Input;
@@ -53,6 +55,12 @@ public class MarioController : MonoBehaviour
     [SerializeField, Min(0f)] private float defaultFormProtectionDuration = 10f;
     [SerializeField, Min(0f)] private float defaultStarPowerDuration = 10f;
 
+    [Header("Fireball")]
+    [SerializeField] private GameObject fireballPrefab;
+    [SerializeField] private Vector2 fireballSpawnOffset = new Vector2(0.55f, 0.35f);
+    [SerializeField, Min(0f)] private float fireballCooldown = 0.15f;
+    [SerializeField, Min(1)] private int maxActiveFireballs = 2;
+
     [Header("Collider")]
     [SerializeField, Min(0.01f)] private Vector2 smallColliderSize = new Vector2(1f, 1f);
     [SerializeField] private Vector2 smallColliderOffset = new Vector2(0f, 0.5f);
@@ -74,10 +82,13 @@ public class MarioController : MonoBehaviour
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
     private MarioVisuals marioVisuals;
+    private AnimatorCache animatorCache;
     private Camera sceneCamera;
+    private InputAction fireAction;
 
     private Vector2 moveInput;
     private bool jumpHeld;
+    private bool firePressedThisFrame;
     private bool isGrounded;
     private bool isDead;
     private bool pendingGrow;
@@ -91,6 +102,8 @@ public class MarioController : MonoBehaviour
     private float jumpSpeed;
     private float shortJumpSpeed;
     private float lastSkidTime = -999f;
+    private float nextFireballTime;
+    private float facingDirectionX = 1f;
     private MarioForm form;
     private MarioForm pendingGrowForm;
     private Coroutine deathRoutine;
@@ -104,6 +117,7 @@ public class MarioController : MonoBehaviour
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
     private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
     private MarioVisuals Visuals => marioVisuals ? marioVisuals : marioVisuals = GetComponent<MarioVisuals>();
+    private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
     private Transform GroundCheck => groundCheck ? groundCheck : groundCheck = transform.Find("GroundCheck");
     private Camera SceneCamera => sceneCamera ? sceneCamera : sceneCamera = Camera.main;
     private CameraController SceneCameraController => SceneCamera ? SceneCamera.GetComponent<CameraController>() : null;
@@ -159,6 +173,7 @@ public class MarioController : MonoBehaviour
         PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, false);
         moveAction.SetEnabled(true);
         jumpAction.SetEnabled(true);
+        ResolveFireAction()?.Enable();
     }
 
     private void OnDisable()
@@ -168,6 +183,7 @@ public class MarioController : MonoBehaviour
         Visuals?.ResetVisuals();
         PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, false);
         PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, false);
+        fireAction?.Disable();
         jumpAction.SetEnabled(false);
         moveAction.SetEnabled(false);
     }
@@ -181,6 +197,7 @@ public class MarioController : MonoBehaviour
         UpdateTimers();
         Visuals?.RefreshVisualState();
         TryStartJump();
+        TryShootFireball();
     }
 
     private void FixedUpdate()
@@ -299,14 +316,59 @@ public class MarioController : MonoBehaviour
             moveInput = Vector2.zero;
             jumpHeld = false;
             jumpBufferTimer = 0f;
+            firePressedThisFrame = false;
             return;
         }
 
         moveInput = moveAction?.action?.ReadValue<Vector2>() ?? Vector2.zero;
         jumpHeld = jumpAction?.action?.IsPressed() ?? false;
+        firePressedThisFrame = ResolveFireAction()?.WasPressedThisFrame() ?? false;
+        if (Mathf.Abs(moveInput.x) > InputDeadzone)
+            facingDirectionX = Mathf.Sign(moveInput.x);
 
         var jumpPressed = jumpAction?.action?.WasPressedThisFrame() ?? false;
         jumpBufferTimer = jumpPressed ? jumpBufferTime : Mathf.Max(0f, jumpBufferTimer - Time.deltaTime);
+    }
+
+    private void TryShootFireball()
+    {
+        if (!firePressedThisFrame) return;
+        firePressedThisFrame = false;
+
+        if (isDead || isWinning) return;
+        if (form != MarioForm.Fire) return;
+        if (Time.time < nextFireballTime) return;
+        if (FireballController.ActiveCount >= maxActiveFireballs) return;
+
+        var prefab = ResolveFireballPrefab();
+        if (!prefab) return;
+
+        var directionX = facingDirectionX >= 0f ? 1f : -1f;
+        var spawnPosition = (Vector2)transform.position + new Vector2(fireballSpawnOffset.x * directionX, fireballSpawnOffset.y);
+        var spawned = PrefabPoolService.Spawn(prefab, spawnPosition, Quaternion.identity);
+        if (!spawned) return;
+
+        if (!spawned.TryGetComponent<FireballController>(out var fireball))
+            fireball = spawned.AddComponent<FireballController>();
+
+        fireball.Launch(this, spawnPosition, directionX);
+        Anim?.TrySetTrigger(FireThrowTrigger);
+        NotifyFireballShot();
+        nextFireballTime = Time.time + fireballCooldown;
+    }
+
+    private InputAction ResolveFireAction()
+    {
+        if (fireAction != null) return fireAction;
+
+        var actionMap = moveAction?.action?.actionMap ?? jumpAction?.action?.actionMap;
+        fireAction = actionMap?.FindAction(FireActionName, false);
+        return fireAction;
+    }
+
+    private GameObject ResolveFireballPrefab()
+    {
+        return fireballPrefab;
     }
 
     private void UpdateGroundState()

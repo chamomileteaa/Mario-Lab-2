@@ -168,6 +168,10 @@ MonoBehaviour:
   formTransitionPauseFallback: 0.2
   defaultFormProtectionDuration: 10
   defaultStarPowerDuration: 10
+  fireballPrefab: {fileID: 4220567841233666923, guid: 5032e3c6f033735499f5856c0a14f80d, type: 3}
+  fireballSpawnOffset: {x: 0.55, y: 0.35}
+  fireballCooldown: 0.15
+  maxActiveFireballs: 2
   smallColliderSize: {x: 0.8, y: 0.9375}
   smallColliderOffset: {x: 0, y: 0.5325}
   bigColliderSize: {x: 0.8, y: 1.9375}
