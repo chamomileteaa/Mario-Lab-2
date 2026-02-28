@@ -357,6 +357,11 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 8976419940446995659, guid: b2d1dde066e85774abec6d5daa268332, type: 3}
   m_PrefabInstance: {fileID: 5325250320079384821}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &581781742 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6070930631125170473, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
+  m_PrefabInstance: {fileID: 2121907898}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -1908,18 +1913,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3200323022130772537, guid: 9527ef00e11cfec49a0a17f3d432ab4b, type: 3}
-  m_PrefabInstance: {fileID: 2795137113583327952}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
-
 --- !u!1001 &1134687226
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2039,8 +2032,18 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: eb33fdd1dcc4d5b43992971673872ee3, type: 3}
---- !u!114 &1210422369 stripped
-
+--- !u!114 &1210422369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &1555480428
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2103,7 +2106,6 @@ Camera:
   m_CorrespondingSourceObject: {fileID: 2516342918247294407, guid: b2d1dde066e85774abec6d5daa268332, type: 3}
   m_PrefabInstance: {fileID: 5325250320079384821}
   m_PrefabAsset: {fileID: 0}
-
 --- !u!114 &1713993398
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2230,18 +2232,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &1733833902 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1646836825501818752, guid: 9527ef00e11cfec49a0a17f3d432ab4b, type: 3}
-  m_PrefabInstance: {fileID: 2795137113583327952}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
-
 --- !u!4 &1845944623 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7476996787474239020, guid: c76c3371c1828d244861b248d65398d1, type: 3}
@@ -2420,7 +2410,7 @@ PrefabInstance:
     - target: {fileID: -1282778830633748523, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       propertyPath: marioSFX
       value: 
-      objectReference: {fileID: 2121907908}
+      objectReference: {fileID: 2121907909}
     - target: {fileID: -1282778830633748523, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       propertyPath: LevelMusic
       value: 
@@ -2472,7 +2462,7 @@ PrefabInstance:
     - target: {fileID: 5933504140016293726, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       propertyPath: CollectableSFX
       value: 
-      objectReference: {fileID: 2121907908}
+      objectReference: {fileID: 0}
     - target: {fileID: 6070930631125170473, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       propertyPath: m_Name
       value: Mario
@@ -2483,33 +2473,45 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 6070930631125170473, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 2121907908}
-    - targetCorrespondingSourceObject: {fileID: 6070930631125170473, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 2121907910}
     - targetCorrespondingSourceObject: {fileID: 6070930631125170473, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 2121907919}
+      addedObject: {fileID: 2121907909}
+    - targetCorrespondingSourceObject: {fileID: 6070930631125170473, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2121907908}
   m_SourcePrefab: {fileID: 100100000, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
 --- !u!4 &2121907899 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 52422375666345885, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
   m_PrefabInstance: {fileID: 2121907898}
   m_PrefabAsset: {fileID: 0}
-
 --- !u!114 &2121907908
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 924658409}
+  m_GameObject: {fileID: 581781742}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5047c2937e749648a04b7766ef90864, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioPlayer
+  source: {fileID: 2121907910}
+--- !u!114 &2121907909
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 581781742}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6cc22e39a8a339a4e894eceb824b7ae6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MarioAudio
-  audioPlayer: {fileID: 2121907919}
+  audioPlayer: {fileID: 2121907908}
   jumpCue: {fileID: 11400000, guid: 4f466592b182bbe47ba404774469b7b6, type: 2}
   growCue: {fileID: 11400000, guid: 5c167a3d3dece9d47bfccecf3c7fdd55, type: 2}
   shrinkPipeCue: {fileID: 11400000, guid: 12303f6f31adc3846ae847a9a7cf433d, type: 2}
@@ -2520,13 +2522,13 @@ AudioSource:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 924658409}
+  m_GameObject: {fileID: 581781742}
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
-  m_PlayOnAwake: 0
+  m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
   Loop: 0
@@ -2611,21 +2613,7 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &2121907919
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 924658409}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e5047c2937e749648a04b7766ef90864, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudioPlayer
-  source: {fileID: 2121907910}
 --- !u!1001 &2795137113583327952
-
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -3009,3 +2997,4 @@ SceneRoots:
   - {fileID: 915371638}
   - {fileID: 103318630}
   - {fileID: 679585759}
+  - {fileID: 2795137113583327952}
