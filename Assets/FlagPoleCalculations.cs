@@ -11,7 +11,7 @@ public class FlagPoleCalculations : MonoBehaviour
     }
 
     //retuern the part ofthe pole that mario touches
-    void OnTriggerEnter(Collider other)
+    void OnTriggerEnter2D(Collider2D other)
     {
         if (!other.CompareTag("Player")) return;
         
