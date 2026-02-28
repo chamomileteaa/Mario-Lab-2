@@ -16,6 +16,10 @@ public class FlagPoleCalculations : MonoBehaviour
         if (!other.CompareTag("Player")) return;
         
         PoleZone zone = GetComponent<PoleZone>();
+        
+        MarioController mario = other.GetComponent<MarioController>();
+        
+        mario.StartVictoryScreen(transform);
 
         int score = zone.GoalScore;
         
