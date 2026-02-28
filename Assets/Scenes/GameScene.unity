@@ -15614,6 +15614,17 @@ Tilemap:
     e31: 0
     e32: 0
     e33: 1
+--- !u!114 &686438015 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6936188119148924829, guid: 016c58e10dc354ab19a0098998f96532, type: 3}
+  m_PrefabInstance: {fileID: 2795137113583327952}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e21644f73ca44a1f8f352e2d2039010, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIScript
 --- !u!1 &850480809
 GameObject:
   m_ObjectHideFlags: 0
@@ -16088,6 +16099,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1832186991767862819, guid: 2ef7a46b0b13d418ebbcbbddec211c2c, type: 3}
+      propertyPath: uiScript
+      value: 
+      objectReference: {fileID: 686438015}
+    - target: {fileID: 1832186991767862819, guid: 2ef7a46b0b13d418ebbcbbddec211c2c, type: 3}
+      propertyPath: fireworkSound
+      value: 
+      objectReference: {fileID: 8300000, guid: 78c708e21657e3b42a3a4ed04b04132d, type: 3}
+    - target: {fileID: 1832186991767862819, guid: 2ef7a46b0b13d418ebbcbbddec211c2c, type: 3}
+      propertyPath: fireworkPrefab
+      value: 
+      objectReference: {fileID: 581654646119451293, guid: 81be068f2ed9a7345b1825ff6ed62e28, type: 3}
+    - target: {fileID: 1832186991767862819, guid: 2ef7a46b0b13d418ebbcbbddec211c2c, type: 3}
+      propertyPath: fireworksSpawnPoint
+      value: 
+      objectReference: {fileID: 1670658173}
     - target: {fileID: 2870953562867616060, guid: 2ef7a46b0b13d418ebbcbbddec211c2c, type: 3}
       propertyPath: m_LocalPosition.x
       value: 193.32
@@ -16255,6 +16282,37 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
+--- !u!1 &1670658172
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1670658173}
+  m_Layer: 0
+  m_Name: FireworkSpawn
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1670658173
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1670658172}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 195.47, y: 2.28, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &1713993393 stripped
 Camera:
   m_CorrespondingSourceObject: {fileID: 2516342918247294407, guid: b2d1dde066e85774abec6d5daa268332, type: 3}
@@ -16571,7 +16629,7 @@ PrefabInstance:
       objectReference: {fileID: 1713993398}
     - target: {fileID: 52422375666345885, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 187.71
       objectReference: {fileID: 0}
     - target: {fileID: 52422375666345885, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       propertyPath: m_LocalPosition.y
@@ -17017,3 +17075,4 @@ SceneRoots:
   - {fileID: 2795137113583327952}
   - {fileID: 1293072342}
   - {fileID: 1373350670}
+  - {fileID: 1670658173}
