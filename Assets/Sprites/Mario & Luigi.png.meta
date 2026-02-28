@@ -706,6 +706,50 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: MarioPole_00
+      rect:
+        serializedVersion: 2
+        x: 138
+        y: 406
+        width: 14
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 78c41cf4bd6650844adf3eed4cefa6e5
+      internalID: 1244234000
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MarioPole_01
+      rect:
+        serializedVersion: 2
+        x: 156
+        y: 409
+        width: 14
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4c6713c973f10b7418bf541bbfebb11b
+      internalID: -2077166251
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
@@ -739,6 +783,8 @@ TextureImporter:
       MarioGrow_00: 2027632939
       MarioGrow_01: 543944603
       MarioGrow_02: -55126689
+      MarioPole_00: 1244234000
+      MarioPole_01: -2077166251
       MarioSmallDie: 1760757537
       MarioSmallIdle: -6871894054375186924
       MarioSmallJump: -1478277456

@@ -22,6 +22,7 @@ public static class GameInitializer
     private static int poolPrewarmCount = DefaultPoolPrewarmCount;
     private static int poolCreatesPerFrame = DefaultPoolCreatesPerFrame;
     private static CoroutineHost host;
+    private static Coroutine scenePrewarmRoutine;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void InitializeOnLoad()
@@ -36,7 +37,7 @@ public static class GameInitializer
 
         ApplyPoolDefaults();
         SceneManager.sceneLoaded += OnSceneLoaded;
-        PrewarmScenePools();
+        ScheduleScenePoolPrewarm();
     }
 
     public static void ConfigurePrewarm(bool enableAsync, int targetPoolPrewarmCount = DefaultPoolPrewarmCount, int targetPoolCreatesPerFrame = DefaultPoolCreatesPerFrame)
@@ -61,7 +62,7 @@ public static class GameInitializer
 
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        PrewarmScenePools();
+        ScheduleScenePoolPrewarm();
     }
 
     private static void PrewarmScenePools()
@@ -73,6 +74,22 @@ public static class GameInitializer
         var brickCoins = Object.FindObjectsByType<BrickCoin>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (var i = 0; i < brickCoins.Length; i++)
             PrewarmPool(brickCoins[i].ScorePopupPrefab);
+    }
+
+    private static void ScheduleScenePoolPrewarm()
+    {
+        if (scenePrewarmRoutine != null)
+            Host.StopCoroutine(scenePrewarmRoutine);
+
+        scenePrewarmRoutine = Host.Run(PrewarmScenePoolsNextFrame());
+    }
+
+    private static IEnumerator PrewarmScenePoolsNextFrame()
+    {
+        // Defer scene scan/prewarm work so first rendered frame is not blocked.
+        yield return null;
+        PrewarmScenePools();
+        scenePrewarmRoutine = null;
     }
 
     private static void StartPrewarm(GameObject prefab)
@@ -111,6 +128,7 @@ public static class GameInitializer
     {
         if (host) Object.Destroy(host.gameObject);
         host = null;
+        scenePrewarmRoutine = null;
 
         if (initialized) SceneManager.sceneLoaded -= OnSceneLoaded;
         initialized = false;
