@@ -1,11 +1,19 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Events;
+using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(AudioSource))]
 [RequireComponent(typeof(AudioPlayer))]
 public class GameManager : MonoBehaviour
 {
+    private enum MainMenuResetMode
+    {
+        ReloadScene = 0,
+        InScene = 1
+    }
+
     [Header("Scene References")]
     [SerializeField] private HudController ui;
     [SerializeField] private MainMenuController mainMenu;
@@ -20,12 +28,18 @@ public class GameManager : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioClip pauseToggleSfx;
 
+    [Header("Reset Flow")]
+    [SerializeField] private MainMenuResetMode mainMenuResetMode = MainMenuResetMode.ReloadScene;
+    [SerializeField] private UnityEvent inSceneResetActions;
+
     private const PauseType GameplayPauseTypes = PauseType.Physics | PauseType.Animation | PauseType.Input;
 
     private GameData gameData;
     private bool userPaused;
     private AudioPlayer audioPlayer;
     private AudioPlayer AudioPlayer => audioPlayer ? audioPlayer : audioPlayer = GetComponent<AudioPlayer>();
+
+    public static GameManager Instance { get; private set; }
 
     private void OnEnable()
     {
@@ -39,6 +53,10 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        if (Instance && Instance != this)
+            Debug.LogWarning("Multiple GameManager instances detected in scene.", this);
+        Instance = this;
+
         gameData = GameData.GetOrCreate();
         ResolveSceneReferences();
 
@@ -52,6 +70,12 @@ public class GameManager : MonoBehaviour
         }
 
         StartLevelFlow();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
     }
 
     public void ShowMainMenu()
@@ -72,6 +96,31 @@ public class GameManager : MonoBehaviour
         gameData.ResetAll();
         gameData.BeginRun();
         StartLevelFlow();
+    }
+
+    public void ReloadCurrentLevel()
+    {
+        ClearUserPause();
+        PauseService.Resume(GameplayPauseTypes);
+        var scene = SceneManager.GetActiveScene();
+        SceneManager.LoadScene(scene.name);
+    }
+
+    public void CompleteRunAndReturnToMainMenu()
+    {
+        if (!gameData) gameData = GameData.GetOrCreate();
+        gameData?.ResetAll();
+        ClearUserPause();
+        PauseService.Resume(GameplayPauseTypes);
+
+        if (mainMenuResetMode == MainMenuResetMode.ReloadScene)
+        {
+            ReloadCurrentLevel();
+            return;
+        }
+
+        inSceneResetActions?.Invoke();
+        ShowMainMenu();
     }
 
     private void HandleStartPressed()

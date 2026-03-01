@@ -80,6 +80,17 @@ public class MarioController : MonoBehaviour
     [SerializeField, Min(0.1f)] private float deathFallbackFallDistance = 8f;
     [SerializeField, Min(0f)] private float deathSceneReloadDelay = 2.8f;
 
+    [Header("Victory")]
+    [SerializeField, Min(0.1f)] private float victorySlideSpeed = 3f;
+    [SerializeField, Min(0.1f)] private float victoryWalkSpeed = 3f;
+    [SerializeField, Min(0f)] private float victoryCastleEntryDelay = 1f;
+    [SerializeField, Min(0f)] private float victoryDoorReachThreshold = 0.05f;
+    [SerializeField, Min(0f)] private float victoryTurnDuration = 0.2f;
+    [SerializeField, Min(0f)] private float poleJumpHorizontalSpeed = 2.4f;
+    [SerializeField, Min(0f)] private float poleJumpVerticalSpeed = 5f;
+    [SerializeField, Min(0f)] private float postFireworksBuffer = 5f;
+    [SerializeField] private bool hideMarioOnCastleEntry = true;
+
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
     private MarioVisuals marioVisuals;
@@ -88,6 +99,7 @@ public class MarioController : MonoBehaviour
     private Camera sceneCamera;
     private InputAction fireAction;
     private GameOverOverlayController gameOverOverlay;
+    private GameManager gameManager;
 
     private Vector2 moveInput;
     private bool jumpHeld;
@@ -96,6 +108,7 @@ public class MarioController : MonoBehaviour
     private bool isDead;
     private bool pendingGrow;
     private bool isWinning;
+    private bool isOnPole;
     private Coroutine winRoutine;
     private float coyoteTimer;
     private float jumpBufferTimer;
@@ -127,6 +140,7 @@ public class MarioController : MonoBehaviour
     private CameraController SceneCameraController => SceneCamera ? SceneCamera.GetComponent<CameraController>() : null;
 
     public bool IsWinning => isWinning;
+    public bool IsOnPole => isOnPole;
     public MarioForm Form => form;
     public bool IsSmall => form == MarioForm.Small;
     public bool IsFormProtected => formProtectionTimer > 0f;
@@ -183,6 +197,7 @@ public class MarioController : MonoBehaviour
     {
         StopFormTransitionSequence();
         StopDeathSequence();
+        isOnPole = false;
         Visuals?.ResetVisuals();
         PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, false);
         fireAction?.Disable();
@@ -192,7 +207,13 @@ public class MarioController : MonoBehaviour
 
     private void Update()
     {
-        if (isDead || isWinning) return;
+        if (isDead) return;
+        if (isWinning)
+        {
+            UpdateTimers();
+            Visuals?.RefreshVisualState();
+            return;
+        }
 
         UpdateInputState();
         UpdateGroundState();
@@ -204,7 +225,7 @@ public class MarioController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (isDead) return;
+        if (isDead || isWinning) return;
 
         TryCompletePendingGrow();
         ApplyHorizontalMovement();
@@ -503,6 +524,7 @@ public class MarioController : MonoBehaviour
         Died?.Invoke();
 
         isDead = true;
+        isOnPole = false;
         pendingGrow = false;
         damageInvulnerabilityTimer = 0f;
         formProtectionTimer = 0f;
@@ -677,6 +699,13 @@ public class MarioController : MonoBehaviour
             deathPauseActive = false;
         }
 
+        var manager = ResolveGameManager();
+        if (manager)
+        {
+            manager.ReloadCurrentLevel();
+            yield break;
+        }
+
         var scene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(scene.name);
     }
@@ -765,6 +794,19 @@ public class MarioController : MonoBehaviour
         return found;
     }
 
+    private GameManager ResolveGameManager()
+    {
+        if (gameManager) return gameManager;
+        if (GameManager.Instance)
+        {
+            gameManager = GameManager.Instance;
+            return gameManager;
+        }
+
+        gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
+        return gameManager;
+    }
+
     private GameOverOverlayController ResolveGameOverOverlay()
     {
         if (gameOverOverlay) return gameOverOverlay;
@@ -774,47 +816,100 @@ public class MarioController : MonoBehaviour
 
     public void StartVictoryScreen(Transform poleTransform)
     {
+        var fallbackBottomY = (poleTransform ? poleTransform.position.y : transform.position.y) - 3.5f;
+        var fallbackDoorX = (poleTransform ? poleTransform.position.x : transform.position.x) + 2.2f;
+        StartVictoryScreen(poleTransform, fallbackBottomY, fallbackDoorX, 0f, null);
+    }
+
+    public void StartVictoryScreen(Transform poleTransform, float poleBottomY, float castleDoorX, float poleXOffset = 0f, Action onReachedCastleDoor = null)
+    {
         if (isDead || isWinning) return;
+        isWinning = true;
+        SetOnPoleState(true);
 
         moveInput = Vector2.zero;
         jumpHeld = false;
         jumpBufferTimer = 0f;
         coyoteTimer = 0f;
+        StopFormTransitionSequence();
         
         if (winRoutine != null) StopCoroutine(winRoutine);
 
-        winRoutine = StartCoroutine(WinSequence(poleTransform));
+        winRoutine = StartCoroutine(WinSequence(poleTransform, poleBottomY, castleDoorX, poleXOffset, onReachedCastleDoor));
     }
 
-    private IEnumerator WinSequence(Transform poleTransform)
+    private IEnumerator WinSequence(Transform poleTransform, float poleBottomY, float castleDoorX, float poleXOffset, Action onReachedCastleDoor)
     {
-        //Add win theme
-        
-        Vector3 pos = transform.position;
-        pos.x = poleTransform.position.x;
+        var anchorX = poleTransform ? poleTransform.position.x + poleXOffset : transform.position.x;
+
+        Body.linearVelocity = Vector2.zero;
+        Body.angularVelocity = 0f;
+        Body.simulated = true;
+        BodyCollider.enabled = true;
+        var pos = transform.position;
+        pos.x = anchorX;
         transform.position = pos;
-        
-        float slideSpeed = 3f;
-        
-        while (transform.position.y > poleTransform.position.y - 3.5f)
+
+        while (transform.position.y > poleBottomY)
         {
-            transform.position += Vector3.down * slideSpeed * Time.deltaTime;
+            var step = victorySlideSpeed * Time.deltaTime;
+            pos = transform.position;
+            pos.x = anchorX;
+            pos.y = Mathf.Max(poleBottomY, pos.y - step);
+            transform.position = pos;
+            Body.linearVelocity = new Vector2(0f, -victorySlideSpeed);
             yield return null;
         }
-        
-        yield return new WaitForSeconds(0.5f);
-        
-        Body.simulated = true;
 
-        float walkSpeed = 3f;
-        float walkTime = 2.5f;
-        float timer = 0f;
+        Body.linearVelocity = Vector2.zero;
+        Flipper?.SetDirection(Vector2.left);
+        if (victoryTurnDuration > 0f)
+            yield return new WaitForSeconds(victoryTurnDuration);
 
-        while (timer < walkTime)
+        SetOnPoleState(false);
+        Flipper?.SetDirection(Vector2.right);
+        Body.linearVelocity = new Vector2(Mathf.Max(0f, poleJumpHorizontalSpeed), Mathf.Max(0f, poleJumpVerticalSpeed));
+
+        while (!isGrounded)
         {
-            Body.linearVelocity = new Vector2(walkSpeed, Body.linearVelocity.y);
-            timer += Time.deltaTime;
+            UpdateGroundState();
             yield return null;
+        }
+
+        Body.linearVelocity = Vector2.zero;
+
+        while (Mathf.Abs(transform.position.x - castleDoorX) > victoryDoorReachThreshold)
+        {
+            var direction = Mathf.Sign(castleDoorX - transform.position.x);
+            if (Mathf.Abs(direction) < InputDeadzone) direction = 1f;
+            Body.linearVelocity = new Vector2(direction * victoryWalkSpeed, Body.linearVelocity.y);
+            if (direction >= 0f) Flipper?.SetDirection(Vector2.right);
+            else Flipper?.SetDirection(Vector2.left);
+            yield return null;
+        }
+
+        Body.linearVelocity = Vector2.zero;
+        Body.angularVelocity = 0f;
+        onReachedCastleDoor?.Invoke();
+
+        if (postFireworksBuffer > 0f)
+            yield return new WaitForSeconds(postFireworksBuffer);
+
+        if (hideMarioOnCastleEntry)
+        {
+            var spriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+            for (var i = 0; i < spriteRenderers.Length; i++)
+                if (spriteRenderers[i]) spriteRenderers[i].enabled = false;
+        }
+
+        if (victoryCastleEntryDelay > 0f)
+            yield return new WaitForSeconds(victoryCastleEntryDelay);
+
+        var manager = ResolveGameManager();
+        if (manager)
+        {
+            manager.CompleteRunAndReturnToMainMenu();
+            yield break;
         }
 
         var gameData = ResolveGameData();
@@ -822,6 +917,11 @@ public class MarioController : MonoBehaviour
 
         var scene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(scene.name);
+    }
 
+    private void SetOnPoleState(bool value)
+    {
+        isOnPole = value;
+        Anim?.TrySet("isOnPole", value);
     }
 }

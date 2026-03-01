@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.2D.Tilemap.Extras::UnityEngine.Tilemaps.AnimatedTile
   m_AnimatedSprites:
   - {fileID: 417380604, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}
-  - {fileID: 497863126, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}
-  - {fileID: 497863126, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}
-  - {fileID: 417380604, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}
   - {fileID: -1364265652, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}
+  - {fileID: 417380604, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}
+  - {fileID: 497863126, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}
+  - {fileID: 497863126, guid: 02afe9f8ec02e894681663a55f7c5753, type: 3}
   m_MinSpeed: 4
   m_MaxSpeed: 4
   m_AnimationStartTime: 0

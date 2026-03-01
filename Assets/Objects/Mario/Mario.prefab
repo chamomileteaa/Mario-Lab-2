@@ -150,7 +150,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MarioController
   moveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   jumpAction: {fileID: -2099379676528639254, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  maxMoveSpeed: 7
+  maxMoveSpeed: 10
   acceleration: 30
   deceleration: 10
   airControlMultiplier: 0.85
@@ -184,6 +184,16 @@ MonoBehaviour:
   deathBounceSpeed: 20
   deathOffscreenBuffer: 1
   deathFallbackFallDistance: 8
+  deathSceneReloadDelay: 2.8
+  victorySlideSpeed: 3
+  victoryWalkSpeed: 3
+  victoryCastleEntryDelay: 1
+  victoryDoorReachThreshold: 0.05
+  victoryTurnDuration: 0.2
+  poleJumpHorizontalSpeed: 2.4
+  poleJumpVerticalSpeed: 5
+  postFireworksBuffer: 5
+  hideMarioOnCastleEntry: 1
 --- !u!114 &5281543393673878123
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -200,6 +210,7 @@ MonoBehaviour:
   invulnerabilityFlickerSpeed: 18
   useStarPaletteShader: 1
   starPaletteShader: {fileID: 4800000, guid: 55ee1865682549a4fb7c9e3479d8e3ce, type: 3}
+  prewarmStarResources: 1
   starSlowPhaseSeconds: 2.25
   starFastFramesPerStep: 4
   starSlowFramesPerStep: 8
@@ -216,6 +227,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MarioCollisionHandler
   ui: {fileID: 0}
+  coinScore: 200
+  redMushroomScore: 1000
+  fireFlowerScore: 1000
+  starmanScore: 1000
   stompBounceSpeed: 12
   stompContactGap:
     min: -0.55
@@ -260,10 +275,10 @@ BoxCollider2D:
   m_Offset: {x: 0, y: 0.5325}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
+    pivot: {x: 0.5, y: 0}
+    oldSize: {x: 0.8125, y: 1}
+    newSize: {x: 0.8125, y: 1}
+    adaptiveTilingThreshold: 0.5
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0

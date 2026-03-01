@@ -1243,7 +1243,7 @@ TextureImporter:
         width: 8
         height: 8
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -1252,6 +1252,270 @@ TextureImporter:
       bones: []
       spriteID: 2b1bafcb8948e7f4099fbe5df1ed6601
       internalID: 1270897581
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Pole
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 16
+        width: 16
+        height: 152
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 81dc1659c3d05bf428ee9e2a600bb46d
+      internalID: -1094995656
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Castle
+      rect:
+        serializedVersion: 2
+        x: 24
+        y: 0
+        width: 80
+        height: 80
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9b1a126e4eac813418cd72e003da0d3d
+      internalID: 933663148
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PipeHorizontalOutletTopUnderground
+      rect:
+        serializedVersion: 2
+        x: 249
+        y: 530
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d1c6aa07265726a4486224d9385ed586
+      internalID: -1995508964
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PipeHorizontalOutletBottomUndeground
+      rect:
+        serializedVersion: 2
+        x: 249
+        y: 513
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f54ac25096a522a4ea39628bd2c9541c
+      internalID: -212211839
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PipeHorizontalBottomUndeground
+      rect:
+        serializedVersion: 2
+        x: 266
+        y: 513
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c1438629cacfd5f4d8aaea0c6b35c640
+      internalID: 1664223967
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PipeHorizontalTopUnderground
+      rect:
+        serializedVersion: 2
+        x: 266
+        y: 530
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ba6be329879e35e4f9ca31e5b457f17c
+      internalID: -738421073
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PipeJoinTopUndeground
+      rect:
+        serializedVersion: 2
+        x: 283
+        y: 530
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3a7986d8d7bde5240a7fc421a990f6ed
+      internalID: 540552496
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PipeJoinBottomUnderground
+      rect:
+        serializedVersion: 2
+        x: 283
+        y: 513
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 149d80a4bda00764abce24768109415d
+      internalID: -597627060
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PipeVerticalOutletLeftUnderground
+      rect:
+        serializedVersion: 2
+        x: 283
+        y: 564
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a03ab0da8829bdc47823e1403795d3a1
+      internalID: -1502552654
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PipeVerticalOutletRightUnderground
+      rect:
+        serializedVersion: 2
+        x: 300
+        y: 564
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0f845c39cde7cde4e99a3539431bd379
+      internalID: 1173470414
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PipeVerticalLeftUnderground
+      rect:
+        serializedVersion: 2
+        x: 283
+        y: 547
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8aa981855ead35849851a23e4743c2fa
+      internalID: -1910906124
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PipeVerticalRightUnderground
+      rect:
+        serializedVersion: 2
+        x: 300
+        y: 547
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: efc811b5e6cedc447adaa948d4a1629a
+      internalID: 344458958
       vertices: []
       indices: 
       edges: []
@@ -1274,6 +1538,7 @@ TextureImporter:
       BrickBlock: 1274785263
       BrickBlockTop: -1895548009
       BrickParticle: 1270897581
+      Castle: 933663148
       CastleDoorLeft: 892628487
       CastleDoorRight: 688620881
       CastleDoorTop: 1491075712
@@ -1299,15 +1564,26 @@ TextureImporter:
       HillTop: 2006010916
       MetalBlock: -287436829
       PipeHorizontalBottom: -1467690137
+      PipeHorizontalBottomUndeground: 1664223967
       PipeHorizontalOutletBottom: -392832005
+      PipeHorizontalOutletBottomUndeground: -212211839
       PipeHorizontalOutletTop: -2130664592
+      PipeHorizontalOutletTopUnderground: -1995508964
       PipeHorizontalTop: -2055908896
+      PipeHorizontalTopUnderground: -738421073
       PipeJoinBottom: 1606571021
+      PipeJoinBottomUnderground: -597627060
       PipeJoinTop: 243625932
+      PipeJoinTopUndeground: 540552496
       PipeVerticalLeft: -257956285
+      PipeVerticalLeftUnderground: -1910906124
       PipeVerticalOutletLeft: 2033380007
+      PipeVerticalOutletLeftUnderground: -1502552654
       PipeVerticalOutletRight: -1952366179
+      PipeVerticalOutletRightUnderground: 1173470414
       PipeVerticalRight: 1136278040
+      PipeVerticalRightUnderground: 344458958
+      Pole: -1094995656
       QuestionBlockDepleted: -1802323192
       QuestionBlock_00: 5441223297315994465
       QuestionBlock_01: 1724915861
@@ -1322,6 +1598,7 @@ TextureImporter:
       UndergroundCoin_02: -1364265652
       UndergroundMetalBlock: -1307770141
       UndergroundSolidBlock: -1992740404
+      VPipeVerticalRight: 344458958
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

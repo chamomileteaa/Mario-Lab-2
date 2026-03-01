@@ -90,6 +90,10 @@ public static class GameInitializer
 
         PrewarmPool(config.FireballPrefab);
 
+        yield return null;
+
+        PrewarmPool(config.FireworksPrefab);
+
         scenePrewarmRoutine = null;
     }
 

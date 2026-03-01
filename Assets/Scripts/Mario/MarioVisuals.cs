@@ -24,6 +24,7 @@ public class MarioVisuals : MonoBehaviour
     private const string IsCrouchingParameter = "isCrouching";
     private const string IsSkiddingParameter = "isSkidding";
     private const string FormParameter = "form";
+    private const string IsOnPoleParameter = "isOnPole";
     private static readonly int StarEnabledId = Shader.PropertyToID("_StarEnabled");
     private static readonly int PaletteIndexId = Shader.PropertyToID("_PaletteIndex");
 
@@ -139,6 +140,7 @@ public class MarioVisuals : MonoBehaviour
         Anim.TrySet(IsCrouchingParameter, Mario.IsCrouching);
         Anim.TrySet(IsSkiddingParameter, IsSkidding(inputX, velocity.x));
         Anim.TrySet(FormParameter, (float)Mario.Form);
+        Anim.TrySet(IsOnPoleParameter, Mario.IsOnPole);
     }
 
     private void UpdateSpriteDirection()

@@ -707,15 +707,15 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: MarioPole_00
+      name: MarioBigPole_00
       rect:
         serializedVersion: 2
         x: 138
-        y: 406
+        y: 405
         width: 14
-        height: 30
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+        height: 32
+      alignment: 9
+      pivot: {x: 0.71428573, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -729,15 +729,15 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: MarioPole_01
+      name: MarioBigPole_01
       rect:
         serializedVersion: 2
         x: 156
-        y: 409
+        y: 405
         width: 14
-        height: 27
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+        height: 32
+      alignment: 9
+      pivot: {x: 0.71428573, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -759,7 +759,7 @@ TextureImporter:
         width: 8
         height: 8
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -781,7 +781,7 @@ TextureImporter:
         width: 8
         height: 8
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -803,7 +803,7 @@ TextureImporter:
         width: 8
         height: 8
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -825,7 +825,7 @@ TextureImporter:
         width: 8
         height: 8
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -834,6 +834,94 @@ TextureImporter:
       bones: []
       spriteID: a5e9a3212c7b2024ea1b3fdf780e312a
       internalID: 1319380257
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MarioSmallPole_00
+      rect:
+        serializedVersion: 2
+        x: 138
+        y: 445
+        width: 14
+        height: 16
+      alignment: 9
+      pivot: {x: 0.71428573, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dc2f7afb149f45b498233e9564ff8d51
+      internalID: -261323061
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MarioSmallPole_01
+      rect:
+        serializedVersion: 2
+        x: 156
+        y: 445
+        width: 14
+        height: 16
+      alignment: 9
+      pivot: {x: 0.71428573, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8d5e4939a48e6d84c8b64a84dbf8e7a1
+      internalID: -372405133
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MarioFirePole_00
+      rect:
+        serializedVersion: 2
+        x: 138
+        y: 297
+        width: 14
+        height: 32
+      alignment: 9
+      pivot: {x: 0.71428573, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 55e78e5c9c76f3b4296653591d4a0299
+      internalID: 1957692531
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MarioFirePole_01
+      rect:
+        serializedVersion: 2
+        x: 156
+        y: 297
+        width: 14
+        height: 32
+      alignment: 9
+      pivot: {x: 0.71428573, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bdf9ea4a52c7d8148ae1b2bc84ba51bd
+      internalID: 1018619226
       vertices: []
       indices: 
       edges: []
@@ -859,6 +947,8 @@ TextureImporter:
       MarioBigCrouch: 882023827
       MarioBigIdle: 737696494
       MarioBigJump: 1680450862
+      MarioBigPole_00: 1244234000
+      MarioBigPole_01: -2077166251
       MarioBigSkid: 1814365344
       MarioBigWalk_00: -1598595914
       MarioBigWalk_01: -531734026
@@ -866,6 +956,8 @@ TextureImporter:
       MarioFireCrouch: -1354188066
       MarioFireIdle: -1107932799
       MarioFireJump: 296595521
+      MarioFirePole_00: 1957692531
+      MarioFirePole_01: 1018619226
       MarioFireSkid: -594430970
       MarioFireThrowAdditive: 677313631
       MarioFireThrowBase: -1743770542
@@ -875,11 +967,11 @@ TextureImporter:
       MarioGrow_00: 2027632939
       MarioGrow_01: 543944603
       MarioGrow_02: -55126689
-      MarioPole_00: 1244234000
-      MarioPole_01: -2077166251
       MarioSmallDie: 1760757537
       MarioSmallIdle: -6871894054375186924
       MarioSmallJump: -1478277456
+      MarioSmallPole_00: -261323061
+      MarioSmallPole_01: -372405133
       MarioSmallSkid: 751882189
       MarioSmallWalk_00: 976841844
       MarioSmallWalk_01: 381021023

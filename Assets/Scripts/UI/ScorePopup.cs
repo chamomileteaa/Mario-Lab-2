@@ -10,6 +10,7 @@ public class ScorePopup : MonoBehaviour
     [SerializeField, Min(0)] private int score = 200;
     [SerializeField, Min(1f)] private float riseSpeed = 150f;
     [SerializeField, Min(0.01f)] private float lifetime = 0.6f;
+    [SerializeField, Min(0.01f)] private float staticLifetime = 0.9f;
     [SerializeField, Range(0f, 1f)] private float fadeStartNormalized = 0.45f;
 
     private static Canvas cachedRootCanvas;
@@ -54,56 +55,56 @@ public class ScorePopup : MonoBehaviour
 
     public void Show(int value, Vector3 worldPosition)
     {
-        if (!TryAttachToCanvas())
-        {
-            PrefabPoolService.Despawn(gameObject);
-            return;
-        }
-
+        if (!PrepareForShow(worldPosition)) return;
         SetScore(value);
-        Label.color = baseColor;
-
-        if (!TryWorldToAnchored(worldPosition, out startAnchoredPosition))
-        {
-            PrefabPoolService.Despawn(gameObject);
-            return;
-        }
-
-        Rect.anchoredPosition = startAnchoredPosition;
-        if (lifeRoutine != null) StopCoroutine(lifeRoutine);
-        lifeRoutine = StartCoroutine(Life());
+        lifeRoutine = StartCoroutine(Life(true, lifetime));
     }
 
     public void ShowLabel(string label, Vector3 worldPosition)
     {
+        if (!PrepareForShow(worldPosition)) return;
+        SetLabel(label);
+        lifeRoutine = StartCoroutine(Life(true, lifetime));
+    }
+
+    public void ShowStatic(int value, Vector3 worldPosition, float duration = -1f)
+    {
+        if (!PrepareForShow(worldPosition)) return;
+        SetScore(value);
+        lifeRoutine = StartCoroutine(Life(false, duration > 0f ? duration : staticLifetime));
+    }
+
+    private bool PrepareForShow(Vector3 worldPosition)
+    {
         if (!TryAttachToCanvas())
         {
             PrefabPoolService.Despawn(gameObject);
-            return;
+            return false;
         }
 
-        SetLabel(label);
         Label.color = baseColor;
 
         if (!TryWorldToAnchored(worldPosition, out startAnchoredPosition))
         {
             PrefabPoolService.Despawn(gameObject);
-            return;
+            return false;
         }
 
         Rect.anchoredPosition = startAnchoredPosition;
         if (lifeRoutine != null) StopCoroutine(lifeRoutine);
-        lifeRoutine = StartCoroutine(Life());
+        return true;
     }
 
-    private IEnumerator Life()
+    private IEnumerator Life(bool floatUp, float duration)
     {
         var elapsed = 0f;
-        while (elapsed < lifetime)
+        duration = Mathf.Max(0.01f, duration);
+        while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            var t = Mathf.Clamp01(elapsed / lifetime);
-            Rect.anchoredPosition = startAnchoredPosition + Vector2.up * (riseSpeed * elapsed);
+            var t = Mathf.Clamp01(elapsed / duration);
+            if (floatUp)
+                Rect.anchoredPosition = startAnchoredPosition + Vector2.up * (riseSpeed * elapsed);
 
             if (t >= fadeStartNormalized)
             {

@@ -52,6 +52,8 @@ public class CameraController : MonoBehaviour
     private bool savedLockState;
     private bool savedLockHorizontal;
     private bool savedLockVertical;
+    private Coroutine skyPanRoutine;
+    private bool holdPositionAfterSkyPan;
 
     private void Awake()
     {
@@ -98,11 +100,15 @@ public class CameraController : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (skyPanRoutine != null) return;
+
         if (mainMenuMode)
         {
             transform.position = GetMainMenuPosition();
             return;
         }
+
+        if (holdPositionAfterSkyPan) return;
 
         if (!followTarget) return;
         if (!ActiveBounds) return;
@@ -290,5 +296,39 @@ public class CameraController : MonoBehaviour
         }
 
         camera.backgroundColor = defaultBackgroundColor;
+    }
+
+    public void StartSkyPan(float deltaY, float duration, bool holdAfterPan = false)
+    {
+        if (duration <= 0f || Mathf.Approximately(deltaY, 0f)) return;
+        if (skyPanRoutine != null) StopCoroutine(skyPanRoutine);
+        holdPositionAfterSkyPan = false;
+        skyPanRoutine = StartCoroutine(SkyPanRoutine(deltaY, duration));
+        holdPositionAfterSkyPan = holdAfterPan;
+    }
+
+    private System.Collections.IEnumerator SkyPanRoutine(float deltaY, float duration)
+    {
+        var start = transform.position;
+        var end = start + Vector3.up * deltaY;
+        var elapsed = 0f;
+        var resolvedDuration = Mathf.Max(0.05f, duration);
+
+        while (elapsed < resolvedDuration)
+        {
+            elapsed += Time.deltaTime;
+            var t = Mathf.Clamp01(elapsed / resolvedDuration);
+            var eased = Mathf.SmoothStep(0f, 1f, t);
+            transform.position = Vector3.Lerp(start, end, eased);
+            yield return null;
+        }
+
+        transform.position = end;
+        skyPanRoutine = null;
+    }
+
+    public void ReleaseSkyPanHold()
+    {
+        holdPositionAfterSkyPan = false;
     }
 }
