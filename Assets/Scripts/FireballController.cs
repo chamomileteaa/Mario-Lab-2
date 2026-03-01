@@ -1,9 +1,11 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(CircleCollider2D))]
+[RequireComponent(typeof(BoxCollider2D))]
+[RequireComponent(typeof(AudioPlayer))]
 public class FireballController : MonoBehaviour
 {
     private const string EnemyTag = "Enemy";
@@ -16,22 +18,33 @@ public class FireballController : MonoBehaviour
     [SerializeField, Min(0f)] private float bounceVerticalSpeed = 4.75f;
     [SerializeField, Min(0f)] private float maxLifetime = 3f;
     [SerializeField, Min(0)] private int maxBounces = 6;
+    [SerializeField, Min(0f)] private float offscreenDespawnPadding = 0.25f;
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip hitClip;
 
     private static int activeCount;
 
     private Rigidbody2D body2D;
-    private CircleCollider2D bodyCollider2D;
+    private BoxCollider2D bodyCollider2D;
+    private AudioPlayer audioPlayer;
     private MarioController owner;
     private float directionX = 1f;
     private float lifeTimer;
     private int bounceCount;
     private bool launched;
     private bool countedAsActive;
+    private bool hasBeenVisibleToMainCamera;
+    private bool despawnQueued;
+    private Camera mainCamera;
+    private Coroutine despawnRoutine;
     private Collider2D[] ownColliders = new Collider2D[0];
+    private SpriteRenderer[] spriteRenderers = new SpriteRenderer[0];
     private readonly List<Collider2D> ignoredOwnerColliders = new List<Collider2D>(8);
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
-    private CircleCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<CircleCollider2D>();
+    private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
+    private AudioPlayer Audio => audioPlayer ? audioPlayer : audioPlayer = GetComponent<AudioPlayer>();
 
     public static int ActiveCount => activeCount;
 
@@ -48,6 +61,9 @@ public class FireballController : MonoBehaviour
         bounceCount = 0;
         owner = null;
         directionX = 1f;
+        despawnQueued = false;
+        hasBeenVisibleToMainCamera = false;
+        mainCamera = Camera.main;
         Body.gravityScale = 1f;
         Body.simulated = true;
         Body.linearVelocity = Vector2.zero;
@@ -55,6 +71,8 @@ public class FireballController : MonoBehaviour
         Body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         BodyCollider.enabled = true;
         CacheOwnColliders();
+        CacheSpriteRenderers();
+        SetRenderersVisible(true);
     }
 
     private void OnDisable()
@@ -68,11 +86,17 @@ public class FireballController : MonoBehaviour
         ClearOwnerCollisionIgnores();
         launched = false;
         owner = null;
+        despawnQueued = false;
+        if (despawnRoutine != null)
+        {
+            StopCoroutine(despawnRoutine);
+            despawnRoutine = null;
+        }
     }
 
     private void FixedUpdate()
     {
-        if (!launched) return;
+        if (!launched || despawnQueued) return;
 
         lifeTimer += Time.fixedDeltaTime;
         if (lifeTimer >= maxLifetime)
@@ -84,6 +108,12 @@ public class FireballController : MonoBehaviour
         var velocity = Body.linearVelocity;
         velocity.x = directionX * horizontalSpeed;
         Body.linearVelocity = velocity;
+
+        if (ShouldDespawnOffscreen())
+        {
+            Despawn(false);
+            return;
+        }
     }
 
     public void Launch(MarioController fireOwner, Vector2 worldPosition, float direction)
@@ -106,24 +136,24 @@ public class FireballController : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (!launched) return;
+        if (!launched || despawnQueued) return;
         if (!collision) return;
         if (IsIgnoredCollider(collision)) return;
 
         if (TryHandleEnemyImpact(collision))
-            Despawn();
+            Despawn(true);
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (!launched) return;
+        if (!launched || despawnQueued) return;
         if (collision == null) return;
         if (!collision.collider) return;
         if (IsIgnoredCollider(collision.collider)) return;
 
         if (TryHandleEnemyImpact(collision.collider))
         {
-            Despawn();
+            Despawn(true);
             return;
         }
 
@@ -146,7 +176,7 @@ public class FireballController : MonoBehaviour
 
         if (shouldDespawn)
         {
-            Despawn();
+            Despawn(true);
             return;
         }
 
@@ -155,7 +185,7 @@ public class FireballController : MonoBehaviour
         bounceCount++;
         if (bounceCount > maxBounces)
         {
-            Despawn();
+            Despawn(true);
             return;
         }
 
@@ -220,6 +250,21 @@ public class FireballController : MonoBehaviour
         ownColliders = GetComponentsInChildren<Collider2D>(true);
     }
 
+    private void CacheSpriteRenderers()
+    {
+        spriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+    }
+
+    private void SetRenderersVisible(bool visible)
+    {
+        if (spriteRenderers == null || spriteRenderers.Length == 0) return;
+        for (var i = 0; i < spriteRenderers.Length; i++)
+        {
+            var renderer = spriteRenderers[i];
+            if (renderer) renderer.enabled = visible;
+        }
+    }
+
     private void ApplyOwnerCollisionIgnores()
     {
         if (!owner) return;
@@ -268,8 +313,70 @@ public class FireballController : MonoBehaviour
         ignoredOwnerColliders.Clear();
     }
 
-    private void Despawn()
+    private bool ShouldDespawnOffscreen()
     {
+        var camera = mainCamera ? mainCamera : mainCamera = Camera.main;
+        if (!camera || !camera.orthographic || !BodyCollider) return false;
+
+        var cameraPosition = camera.transform.position;
+        var halfHeight = camera.orthographicSize + offscreenDespawnPadding;
+        var halfWidth = halfHeight * camera.aspect + offscreenDespawnPadding;
+        var viewRect = new Rect(
+            cameraPosition.x - halfWidth,
+            cameraPosition.y - halfHeight,
+            halfWidth * 2f,
+            halfHeight * 2f);
+
+        var bounds = BodyCollider.bounds;
+        var overlapsView =
+            bounds.max.x >= viewRect.xMin &&
+            bounds.min.x <= viewRect.xMax &&
+            bounds.max.y >= viewRect.yMin &&
+            bounds.min.y <= viewRect.yMax;
+
+        if (overlapsView)
+        {
+            hasBeenVisibleToMainCamera = true;
+            return false;
+        }
+
+        return hasBeenVisibleToMainCamera;
+    }
+
+    private void Despawn(bool playHitSound = false)
+    {
+        if (despawnQueued) return;
+
+        if (!playHitSound || !hitClip)
+        {
+            PrefabPoolService.Despawn(gameObject);
+            return;
+        }
+
+        despawnQueued = true;
+        launched = false;
+        Body.linearVelocity = Vector2.zero;
+        Body.angularVelocity = 0f;
+        Body.simulated = false;
+        if (ownColliders != null)
+        {
+            for (var i = 0; i < ownColliders.Length; i++)
+            {
+                var collider = ownColliders[i];
+                if (collider) collider.enabled = false;
+            }
+        }
+        SetRenderersVisible(false);
+
+        despawnRoutine = StartCoroutine(PlayHitThenDespawn());
+    }
+
+    private IEnumerator PlayHitThenDespawn()
+    {
+        Audio?.PlayOneShot(hitClip);
+        var delay = Mathf.Clamp(hitClip.length, 0.02f, 0.25f);
+        yield return new WaitForSeconds(delay);
+        despawnRoutine = null;
         PrefabPoolService.Despawn(gameObject);
     }
 }

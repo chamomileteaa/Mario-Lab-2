@@ -47,6 +47,11 @@ public class ScorePopup : MonoBehaviour
         Label.text = score.ToString();
     }
 
+    public void SetLabel(string text)
+    {
+        Label.text = string.IsNullOrWhiteSpace(text) ? "0" : text;
+    }
+
     public void Show(int value, Vector3 worldPosition)
     {
         if (!TryAttachToCanvas())
@@ -56,6 +61,28 @@ public class ScorePopup : MonoBehaviour
         }
 
         SetScore(value);
+        Label.color = baseColor;
+
+        if (!TryWorldToAnchored(worldPosition, out startAnchoredPosition))
+        {
+            PrefabPoolService.Despawn(gameObject);
+            return;
+        }
+
+        Rect.anchoredPosition = startAnchoredPosition;
+        if (lifeRoutine != null) StopCoroutine(lifeRoutine);
+        lifeRoutine = StartCoroutine(Life());
+    }
+
+    public void ShowLabel(string label, Vector3 worldPosition)
+    {
+        if (!TryAttachToCanvas())
+        {
+            PrefabPoolService.Despawn(gameObject);
+            return;
+        }
+
+        SetLabel(label);
         Label.color = baseColor;
 
         if (!TryWorldToAnchored(worldPosition, out startAnchoredPosition))

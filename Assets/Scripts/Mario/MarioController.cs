@@ -57,7 +57,7 @@ public class MarioController : MonoBehaviour
 
     [Header("Fireball")]
     [SerializeField] private GameObject fireballPrefab;
-    [SerializeField] private Vector2 fireballSpawnOffset = new Vector2(0.55f, 0.35f);
+    [SerializeField] private Vector2 fireballSpawnOffset = new Vector2(0.55f, 0.9f);
     [SerializeField, Min(0f)] private float fireballCooldown = 0.15f;
     [SerializeField, Min(1)] private int maxActiveFireballs = 2;
 
@@ -84,6 +84,7 @@ public class MarioController : MonoBehaviour
     private BoxCollider2D bodyCollider2D;
     private MarioVisuals marioVisuals;
     private AnimatorCache animatorCache;
+    private SpriteFlipper spriteFlipper;
     private Camera sceneCamera;
     private InputAction fireAction;
     private GameOverOverlayController gameOverOverlay;
@@ -120,6 +121,7 @@ public class MarioController : MonoBehaviour
     private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
     private MarioVisuals Visuals => marioVisuals ? marioVisuals : marioVisuals = GetComponent<MarioVisuals>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
+    private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
     private Transform GroundCheck => groundCheck ? groundCheck : groundCheck = transform.Find("GroundCheck");
     private Camera SceneCamera => sceneCamera ? sceneCamera : sceneCamera = Camera.main;
     private CameraController SceneCameraController => SceneCamera ? SceneCamera.GetComponent<CameraController>() : null;
@@ -219,7 +221,7 @@ public class MarioController : MonoBehaviour
             return;
         }
 
-        SetForm((MarioForm)((int)form - 1));
+        SetForm(MarioForm.Small);
         Damaged?.Invoke();
         damageInvulnerabilityTimer = damageInvulnerabilityTime;
     }
@@ -250,10 +252,12 @@ public class MarioController : MonoBehaviour
         if (!grew && targetForm == MarioForm.Small)
             ApplySmallCollider();
 
+        var transitionGrew = ShouldUseGrowTransitionVisual(previousForm, targetForm, grew);
+        Visuals?.PlayFormTransition(transitionGrew);
+
         form = targetForm;
-        Visuals?.PlayFormTransition(grew);
         FormChanged?.Invoke(previousForm, form);
-        StartFormTransitionPause(grew, previousForm, form);
+        StartFormTransitionPause(transitionGrew, previousForm, form);
     }
 
     public void ActivateFormProtection(float duration = -1f)
@@ -343,13 +347,17 @@ public class MarioController : MonoBehaviour
         var prefab = ResolveFireballPrefab();
         if (!prefab) return;
 
-        var directionX = facingDirectionX >= 0f ? 1f : -1f;
+        var directionX = ResolveFireballDirectionX();
         var spawnPosition = (Vector2)transform.position + new Vector2(fireballSpawnOffset.x * directionX, fireballSpawnOffset.y);
         var spawned = PrefabPoolService.Spawn(prefab, spawnPosition, Quaternion.identity);
         if (!spawned) return;
 
         if (!spawned.TryGetComponent<FireballController>(out var fireball))
-            fireball = spawned.AddComponent<FireballController>();
+        {
+            Debug.LogError($"Fireball prefab '{prefab.name}' is missing FireballController.", prefab);
+            PrefabPoolService.Despawn(spawned);
+            return;
+        }
 
         fireball.Launch(this, spawnPosition, directionX);
         Anim?.TrySetTrigger(FireThrowTrigger);
@@ -369,6 +377,15 @@ public class MarioController : MonoBehaviour
     private GameObject ResolveFireballPrefab()
     {
         return fireballPrefab;
+    }
+
+    private float ResolveFireballDirectionX()
+    {
+        var flipper = Flipper;
+        if (flipper != null && Mathf.Abs(flipper.FacingX) > InputDeadzone)
+            return Mathf.Sign(flipper.FacingX);
+
+        return facingDirectionX >= 0f ? 1f : -1f;
     }
 
     private void UpdateGroundState()
@@ -547,8 +564,8 @@ public class MarioController : MonoBehaviour
         if (!TryApplyBigCollider()) return;
 
         pendingGrow = false;
-        form = pendingGrowForm;
         Visuals?.PlayFormTransition(true);
+        form = pendingGrowForm;
         FormChanged?.Invoke(MarioForm.Small, form);
         StartFormTransitionPause(true, MarioForm.Small, form);
     }
@@ -674,7 +691,7 @@ public class MarioController : MonoBehaviour
             return;
         }
 
-        if (IsBigFireTransition(fromForm, toForm))
+        if (IsBigFireTransition(fromForm, toForm) && toForm > fromForm)
             Visuals?.ForceStarVisualForDuration(duration);
 
         if (formTransitionRoutine != null)
@@ -693,6 +710,13 @@ public class MarioController : MonoBehaviour
     {
         return (fromForm == MarioForm.Big && toForm == MarioForm.Fire) ||
                (fromForm == MarioForm.Fire && toForm == MarioForm.Big);
+    }
+
+    private static bool ShouldUseGrowTransitionVisual(MarioForm fromForm, MarioForm toForm, bool defaultGrew)
+    {
+        if (IsBigFireTransition(fromForm, toForm) && toForm > fromForm)
+            return true;
+        return defaultGrew;
     }
 
     private void StopFormTransitionSequence()

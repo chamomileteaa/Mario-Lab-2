@@ -21,6 +21,9 @@ public class SpriteFlipper : MonoBehaviour
     private Vector3[] baseScales;
     private Vector3[] baseLocalPositions;
 
+    public float FacingX => facingX;
+    public float FacingY => facingY;
+
     private void Awake() => Initialize();
 
     public void SetDirection(Vector2 direction)

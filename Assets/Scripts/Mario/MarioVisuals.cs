@@ -34,6 +34,7 @@ public class MarioVisuals : MonoBehaviour
     [Header("Star Shader")]
     [SerializeField] private bool useStarPaletteShader = true;
     [SerializeField] private Shader starPaletteShader;
+    [SerializeField] private bool prewarmStarResources = true;
 
     [Header("Star Palette Cycle")]
     [SerializeField, Min(0f)] private float starSlowPhaseSeconds = 2.25f;
@@ -61,6 +62,12 @@ public class MarioVisuals : MonoBehaviour
     private SpriteRenderer[] SpriteRenderers => spriteRenderers != null && spriteRenderers.Length > 0
         ? spriteRenderers
         : spriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+
+    private void Awake()
+    {
+        if (!prewarmStarResources) return;
+        PrewarmStarResources();
+    }
 
     public void RefreshVisualState()
     {
@@ -251,6 +258,18 @@ public class MarioVisuals : MonoBehaviour
         };
         starPaletteMaterial.hideFlags = HideFlags.DontSave;
         return starPaletteMaterial;
+    }
+
+    private void PrewarmStarResources()
+    {
+        var renderers = SpriteRenderers;
+        EnsureSpriteBaseColors(renderers);
+
+        if (!useStarPaletteShader) return;
+        var shader = ResolveStarShader();
+        if (!shader) return;
+
+        _ = GetOrCreateStarMaterial(shader);
     }
 
     private int EvaluateStarPaletteIndex()

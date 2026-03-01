@@ -20,8 +20,6 @@ public class MarioCollisionHandler : MonoBehaviour
     [SerializeField, Min(0)] private int redMushroomScore = 1000;
     [SerializeField, Min(0)] private int fireFlowerScore = 1000;
     [SerializeField, Min(0)] private int starmanScore = 1000;
-    [SerializeField] private GameObject scorePopupPrefab;
-    [SerializeField] private Vector3 scorePopupOffset = new Vector3(0f, 0.35f, 0f);
 
     [Header("Stomp")]
     [SerializeField, Min(0.1f)] private float stompBounceSpeed = 12f;
@@ -261,25 +259,26 @@ public class MarioCollisionHandler : MonoBehaviour
                 Mario.SetForm(MarioController.MarioForm.Big);
                 Mario.ActivateFormProtection();
                 data.AddScore(redMushroomScore);
-                SpawnScorePopup(redMushroomScore, collectibleObject);
+                ResolvePowerupController(collectibleObject)?.ShowCollectScorePopup(redMushroomScore);
                 return;
 
             case CollectibleType.FireFlower:
                 Mario.SetForm(Mario.IsSmall ? MarioController.MarioForm.Big : MarioController.MarioForm.Fire);
                 Mario.ActivateFormProtection();
                 data.AddScore(fireFlowerScore);
-                SpawnScorePopup(fireFlowerScore, collectibleObject);
+                ResolvePowerupController(collectibleObject)?.ShowCollectScorePopup(fireFlowerScore);
                 return;
 
             case CollectibleType.Starman:
                 Mario.ActivateStarPower();
                 data.AddScore(starmanScore);
-                SpawnScorePopup(starmanScore, collectibleObject);
+                ResolvePowerupController(collectibleObject)?.ShowCollectScorePopup(starmanScore);
                 return;
 
             case CollectibleType.OneUp:
                 Mario.NotifyExtraLifeCollected();
                 data.AddLife();
+                ResolvePowerupController(collectibleObject)?.ShowCollectLabelPopup("1UP");
                 return;
         }
     }
@@ -350,15 +349,12 @@ public class MarioCollisionHandler : MonoBehaviour
         PrefabPoolService.Despawn(collectible);
     }
 
-    private void SpawnScorePopup(int value, GameObject source)
+    private static PowerupController ResolvePowerupController(GameObject collectibleObject)
     {
-        if (!scorePopupPrefab || value <= 0) return;
-
-        var origin = source ? source.transform.position : transform.position;
-        var worldPosition = origin + scorePopupOffset;
-        var popupObject = PrefabPoolService.Spawn(scorePopupPrefab, worldPosition, Quaternion.identity);
-        if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
-            popup.Show(value, worldPosition);
+        if (!collectibleObject) return null;
+        if (collectibleObject.TryGetComponent<PowerupController>(out var direct))
+            return direct;
+        return collectibleObject.GetComponentInChildren<PowerupController>(true);
     }
 
     private struct CachedEnemyHandlers

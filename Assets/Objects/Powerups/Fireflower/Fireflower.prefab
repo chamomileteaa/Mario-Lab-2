@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 5335440424140605067}
   - component: {fileID: 2992177849954892201}
   - component: {fileID: 3118975881414425032}
+  - component: {fileID: 2050010010010010010}
   - component: {fileID: 1127431722363200493}
   m_Layer: 8
   m_Name: Fireflower
@@ -172,10 +173,28 @@ MonoBehaviour:
   m_GameObject: {fileID: 1793668169649356561}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2d5f9fae9e0a4d4f9b322968b2b4f38b, type: 3}
+  m_Script: {fileID: 11500000, guid: 01a4ed5feb7656e46884b6b3127dc147, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PowerupAudio
-  spawnClip: {fileID: 8300000, guid: 32301e88d52f6354ca5e3943668db218, type: 3}
+  m_EditorClassIdentifier: Assembly-CSharp::PowerupController
+  spawnSfx: {fileID: 8300000, guid: 32301e88d52f6354ca5e3943668db218, type: 3}
+  scorePopupPrefab: {fileID: 6309700172672840609, guid: d6ea739a175e8df4d8832834f03bdd80, type: 3}
+  scorePopupOffset: {x: 0, y: 0.35, z: 0}
+  riseDistance: 1
+  riseDuration: 0.35
+  sortingOrderBehindBlock: 1
+  disableCollidersWhileRising: 1
+--- !u!114 &2050010010010010010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1793668169649356561}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5047c2937e749648a04b7766ef90864, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioPlayer
 --- !u!82 &1127431722363200493
 AudioSource:
   m_ObjectHideFlags: 0

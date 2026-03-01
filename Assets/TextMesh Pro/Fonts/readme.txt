@@ -1,8 +1,8 @@
 ﻿The font file in this archive was created using Fontstruct the free, online
 font-building tool.
-This font was created by “stardog017219”.
+This font was created by “coolkase”.
 This font has a homepage where this archive and other versions may be found:
-https://fontstruct.com/fontstructions/show/2499139
+https://fontstruct.com/fontstructions/show/2509192
 [ancestry]
 Try Fontstruct at https://fontstruct.com
 It’s easy and it’s fun.
