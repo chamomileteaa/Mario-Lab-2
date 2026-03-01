@@ -40,6 +40,16 @@ public class GameOverOverlayController : MonoBehaviour
         ShowMessage(timeUpText, onFinished);
     }
 
+    public void ShowGameOverPersistent()
+    {
+        ShowMessagePersistent(gameOverText);
+    }
+
+    public void ShowTimeUpPersistent()
+    {
+        ShowMessagePersistent(timeUpText);
+    }
+
     public void HideInstant()
     {
         if (showRoutine != null)
@@ -58,6 +68,19 @@ public class GameOverOverlayController : MonoBehaviour
         if (messageText) messageText.text = message;
         SetVisible(true);
         showRoutine = StartCoroutine(ShowRoutine(onFinished));
+    }
+
+    private void ShowMessagePersistent(string message)
+    {
+        ValidateReferences();
+        if (showRoutine != null)
+        {
+            StopCoroutine(showRoutine);
+            showRoutine = null;
+        }
+
+        if (messageText) messageText.text = message;
+        SetVisible(true);
     }
 
     private IEnumerator ShowRoutine(Action onFinished)

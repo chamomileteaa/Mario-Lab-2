@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
 public class MusicPlayer : MonoBehaviour
@@ -19,13 +20,13 @@ public class MusicPlayer : MonoBehaviour
         WorldClear = 11,
         StageClear = 12,
         NameEntry = 13,
-        SavedPrincess = 14
+        SavedPrincess = 14,
+        GameOver = 15
     }
 
     [SerializeField] private SerializedEnumDictionary<MusicTheme, AudioClip> themes = new SerializedEnumDictionary<MusicTheme, AudioClip>();
     [SerializeField] private MusicTheme activeLevelTheme = MusicTheme.Overworld;
     [SerializeField] private AudioClip hurryUpSfx;
-    [SerializeField, Range(0f, 1f)] private float hurryUpSfxVolume = 1f;
     [SerializeField, Min(1f)] private float hurryTimeThreshold = 100f;
     [SerializeField, Min(0.01f)] private float scheduleLeadTime = 0.05f;
     [SerializeField] private bool preloadThemeAudioData = true;
@@ -34,31 +35,51 @@ public class MusicPlayer : MonoBehaviour
 
     private MarioController mario;
     private GameData gameData;
+    private CameraController cameraController;
     private AudioSource[] sources;
     private AudioClip currentClip;
     private MusicTheme currentTheme;
     private int activeSourceIndex;
     private bool marioSubscribed;
     private bool hurryTriggered;
+    private bool cameraSubscribed;
+    private bool hasLastEnvironment;
+    private CameraEnvironmentType lastEnvironment;
 
     private MarioController Mario => mario ? mario : mario = FindFirstObjectByType<MarioController>(FindObjectsInactive.Include);
     private GameData Data => gameData ? gameData : gameData = GameData.GetOrCreate();
+    private CameraController CameraController => cameraController ? cameraController : cameraController = FindFirstObjectByType<CameraController>(FindObjectsInactive.Include);
     private AudioSource[] Sources => sources ??= ResolveSources();
 
     private void OnEnable()
     {
         PrewarmAudioData();
         TrySubscribeMario();
+        TrySubscribeCamera();
+        SceneManager.sceneLoaded += OnSceneLoaded;
+
+        var data = Data;
+        if (data && data.runActive)
+            OnGameplayRunStarted();
     }
 
     private void Update()
     {
+        TrySubscribeCamera();
+        PollEnvironmentChanges();
+
+        var data = Data;
+        if (data && data.runActive && currentTheme == MusicTheme.NameEntry)
+            OnGameplayRunStarted();
+
         TryTriggerHurryState();
     }
 
     private void OnDisable()
     {
         UnsubscribeMario();
+        UnsubscribeCamera();
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     public void PlayOverworldTheme() => SetLevelTheme(MusicTheme.Overworld);
@@ -68,10 +89,20 @@ public class MusicPlayer : MonoBehaviour
 
     public void PlayStarmanTheme() => PlayTheme(GetStarmanVariant(), true);
     public void PlayDeathTheme() => PlayTheme(MusicTheme.Death, true);
+    public void PlayGameOverTheme() => PlayTheme(MusicTheme.GameOver, true);
     public void PlayWorldClearTheme() => PlayTheme(MusicTheme.WorldClear, true);
     public void PlayStageClearTheme() => PlayTheme(MusicTheme.StageClear, true);
     public void PlayNameEntryTheme() => PlayTheme(MusicTheme.NameEntry, true);
     public void PlaySavedPrincessTheme() => PlayTheme(MusicTheme.SavedPrincess, true);
+    
+    public void OnGameplayRunStarted()
+    {
+        hurryTriggered = false;
+        TrySubscribeCamera();
+        var controller = CameraController;
+        var environment = controller ? controller.ActiveEnvironment : CameraEnvironmentType.Overworld;
+        ApplyEnvironmentTheme(environment, true);
+    }
 
     public bool PlayTheme(MusicTheme theme, bool restartIfPlaying = false)
     {
@@ -126,8 +157,6 @@ public class MusicPlayer : MonoBehaviour
         else PlayCurrentLevelTheme(true);
     }
 
-    private void OnMarioDied() => PlayDeathTheme();
-
     private void TrySubscribeMario()
     {
         if (marioSubscribed) return;
@@ -135,7 +164,6 @@ public class MusicPlayer : MonoBehaviour
 
         Mario.Spawned += OnMarioSpawned;
         Mario.StarPowerChanged += OnStarPowerChanged;
-        Mario.Died += OnMarioDied;
         marioSubscribed = true;
     }
 
@@ -146,8 +174,53 @@ public class MusicPlayer : MonoBehaviour
 
         Mario.Spawned -= OnMarioSpawned;
         Mario.StarPowerChanged -= OnStarPowerChanged;
-        Mario.Died -= OnMarioDied;
         marioSubscribed = false;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        cameraController = null;
+        cameraSubscribed = false;
+        hasLastEnvironment = false;
+        TrySubscribeCamera();
+
+        var data = Data;
+        if (data && data.runActive)
+            OnGameplayRunStarted();
+    }
+
+    private void TrySubscribeCamera()
+    {
+        if (cameraSubscribed) return;
+        var controller = CameraController;
+        if (!controller) return;
+        controller.ActiveEnvironmentChanged += OnActiveEnvironmentChanged;
+        cameraSubscribed = true;
+        ApplyEnvironmentTheme(controller.ActiveEnvironment, false);
+    }
+
+    private void UnsubscribeCamera()
+    {
+        var controller = CameraController;
+        if (!controller) return;
+        controller.ActiveEnvironmentChanged -= OnActiveEnvironmentChanged;
+        cameraSubscribed = false;
+        hasLastEnvironment = false;
+    }
+
+    private void OnActiveEnvironmentChanged(CameraEnvironmentType environment)
+    {
+        ApplyEnvironmentTheme(environment, true);
+    }
+
+    private void PollEnvironmentChanges()
+    {
+        var controller = CameraController;
+        if (!controller) return;
+
+        var environment = controller.ActiveEnvironment;
+        if (hasLastEnvironment && environment == lastEnvironment) return;
+        ApplyEnvironmentTheme(environment, true);
     }
 
     private void ScheduleCue(AudioClip clip, double startDspTime, bool loop)
@@ -253,7 +326,10 @@ public class MusicPlayer : MonoBehaviour
         PlayHurryUpSfx();
 
         if (Mario && Mario.IsStarPowered)
+        {
+            PlayStarmanTheme();
             return;
+        }
 
         PlayCurrentLevelTheme(true);
     }
@@ -264,7 +340,7 @@ public class MusicPlayer : MonoBehaviour
         var localSources = Sources;
         var source = localSources.Length > 0 ? localSources[0] : null;
         if (!source) return;
-        source.PlayOneShot(hurryUpSfx, Mathf.Clamp01(hurryUpSfxVolume));
+        source.PlayOneShot(hurryUpSfx);
     }
 
     private MusicTheme GetStarmanVariant()
@@ -300,6 +376,24 @@ public class MusicPlayer : MonoBehaviour
             MusicTheme.CastleHurried => MusicTheme.Castle,
             _ => theme
         };
+    }
+
+    private void ApplyEnvironmentTheme(CameraEnvironmentType environment, bool restartIfPlaying)
+    {
+        lastEnvironment = environment;
+        hasLastEnvironment = true;
+
+        activeLevelTheme = environment switch
+        {
+            CameraEnvironmentType.Overworld => MusicTheme.Overworld,
+            CameraEnvironmentType.Underground => MusicTheme.Underground,
+            CameraEnvironmentType.Underwater => MusicTheme.Underwater,
+            CameraEnvironmentType.Castle => MusicTheme.Castle,
+            _ => MusicTheme.Overworld
+        };
+
+        if (Mario && Mario.IsStarPowered) return;
+        PlayCurrentLevelTheme(restartIfPlaying);
     }
 
     private void PrewarmAudioData()

@@ -79,7 +79,6 @@ public class GameData : MonoBehaviour
         NotifyChanged();
     }
 
-    //
     public void AddCoin()
     {
         coins++;

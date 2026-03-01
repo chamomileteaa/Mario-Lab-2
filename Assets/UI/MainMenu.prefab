@@ -360,6 +360,7 @@ MonoBehaviour:
   player2Label: 2 PLAYER GAME
   topScoreFormat: TOP- {0:000000}
   unavailableModeMessage: 2P mode is not implemented yet.
+  inputDebounceOnShow: 0.25
 --- !u!225 &1537994712409133030
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -697,7 +698,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_Spacing: 0
+  m_Spacing: 10
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 1

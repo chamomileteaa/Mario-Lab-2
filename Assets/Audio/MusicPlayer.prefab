@@ -176,7 +176,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MusicPlayer
   themes:
-    keys: 000000000100000002000000030000000400000005000000060000000700000008000000090000000a0000000b0000000c0000000d0000000e000000
+    keys: 000000000100000002000000030000000400000005000000060000000700000008000000090000000a0000000b0000000c0000000d0000000e0000000f000000
     values:
     - {fileID: 8300000, guid: 2cccbae27fcee5f4bae6a795f095337b, type: 3}
     - {fileID: 8300000, guid: d355580ea9b082548a86ef8e20e4bf44, type: 3}
@@ -193,11 +193,12 @@ MonoBehaviour:
     - {fileID: 8300000, guid: f6bf0d8b821e72743991f8678da657f2, type: 3}
     - {fileID: 8300000, guid: a2b0a82335bcc964096ab4669ffb2f3a, type: 3}
     - {fileID: 8300000, guid: dfd94125cd5ea5d488f018e5ba57e3ce, type: 3}
+    - {fileID: 8300000, guid: 01c6e998604bdd84eb64f73cf528175a, type: 3}
   activeLevelTheme: 0
   hurryUpSfx: {fileID: 8300000, guid: 8217e1371ad60db40abbc3fd8e2d6988, type: 3}
-  hurryUpSfxVolume: 1
   hurryTimeThreshold: 100
   scheduleLeadTime: 0.05
+  preloadThemeAudioData: 1
   sourceA: {fileID: 1152012379147949350}
   sourceB: {fileID: 7987597030594351310}
 --- !u!1 &7818635407189196352

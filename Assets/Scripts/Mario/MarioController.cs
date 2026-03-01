@@ -92,6 +92,8 @@ public class MarioController : MonoBehaviour
     [SerializeField, Min(0f)] private float postFireworksBuffer = 5f;
     [SerializeField] private bool hideMarioOnCastleEntry = true;
     [SerializeField] private bool disableMarioAtCastleEntry = true;
+    [SerializeField, Min(0)] private int timerScorePerTick = 50;
+    [SerializeField, Min(0.001f)] private float timerTickInterval = 0.01f;
 
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
@@ -100,6 +102,8 @@ public class MarioController : MonoBehaviour
     private SpriteFlipper spriteFlipper;
     private Camera sceneCamera;
     private InputAction fireAction;
+    private MarioAudio marioAudio;
+    private MusicPlayer musicPlayer;
     private GameOverOverlayController gameOverOverlay;
     private GameManager gameManager;
 
@@ -142,6 +146,8 @@ public class MarioController : MonoBehaviour
     private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
     private MarioVisuals Visuals => marioVisuals ? marioVisuals : marioVisuals = GetComponent<MarioVisuals>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
+    private MarioAudio MarioAudioPlayer => marioAudio ? marioAudio : marioAudio = GetComponent<MarioAudio>();
+    private MusicPlayer Music => musicPlayer ? musicPlayer : musicPlayer = FindFirstObjectByType<MusicPlayer>(FindObjectsInactive.Include);
     private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
     private Transform GroundCheck => groundCheck ? groundCheck : groundCheck = transform.Find("GroundCheck");
     private Camera SceneCamera => sceneCamera ? sceneCamera : sceneCamera = Camera.main;
@@ -218,6 +224,16 @@ public class MarioController : MonoBehaviour
 
     private void Update()
     {
+        var data = ResolveGameData();
+        if (data && !data.runActive)
+        {
+            moveInput = Vector2.zero;
+            jumpHeld = false;
+            jumpBufferTimer = 0f;
+            firePressedThisFrame = false;
+            return;
+        }
+
         if (isDead) return;
         if (isPipeTravelling)
         {
@@ -243,6 +259,18 @@ public class MarioController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        var data = ResolveGameData();
+        if (data && !data.runActive)
+        {
+            if (Body)
+            {
+                var velocity = Body.linearVelocity;
+                velocity.x = 0f;
+                Body.linearVelocity = velocity;
+            }
+            return;
+        }
+
         if (isDead || isWinning || isPipeTravelling) return;
 
         TryCompletePendingGrow();
@@ -706,6 +734,10 @@ public class MarioController : MonoBehaviour
     {
         var gameData = ResolveGameData();
         if (gameData) gameData.LoseLife();
+        var timeUp = gameData && gameData.timer <= 0f;
+        var outOfLives = gameData && gameData.lives <= 0;
+        if (timeUp || outOfLives) Music?.PlayGameOverTheme();
+        else Music?.PlayDeathTheme();
 
         Body.linearVelocity = Vector2.zero;
         Body.angularVelocity = 0f;
@@ -737,19 +769,13 @@ public class MarioController : MonoBehaviour
 
         deathRoutine = null;
 
-        var timeUp = gameData && gameData.timer <= 0f;
-        var outOfLives = gameData && gameData.lives <= 0;
         if (timeUp || outOfLives)
         {
             var overlay = ResolveGameOverOverlay();
             if (overlay)
             {
-                var finished = false;
-                if (timeUp) overlay.ShowTimeUp(() => finished = true);
-                else overlay.ShowGameOver(() => finished = true);
-
-                while (!finished)
-                    yield return null;
+                if (timeUp) overlay.ShowTimeUpPersistent();
+                else overlay.ShowGameOverPersistent();
             }
         }
 
@@ -765,11 +791,13 @@ public class MarioController : MonoBehaviour
         var manager = ResolveGameManager();
         if (manager)
         {
-            manager.ReturnToMainMenu();
+            if (timeUp || outOfLives) manager.ReloadSceneToMainMenu();
+            else manager.ReloadSceneForRetry();
             yield break;
         }
 
-        gameData?.ResetAll();
+        if (timeUp || outOfLives)
+            gameData?.ResetAll();
 
         var scene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(scene.name);
@@ -959,6 +987,8 @@ public class MarioController : MonoBehaviour
         ApplyCastleEntryState();
         onReachedCastleDoor?.Invoke();
 
+        yield return AwardTimerBonusRoutine();
+
         if (postFireworksBuffer > 0f)
             yield return new WaitForSeconds(postFireworksBuffer);
 
@@ -968,7 +998,7 @@ public class MarioController : MonoBehaviour
         var manager = ResolveGameManager();
         if (manager)
         {
-            manager.CompleteRunAndReturnToMainMenu();
+            manager.ReloadSceneToMainMenu();
             yield break;
         }
 
@@ -1008,6 +1038,27 @@ public class MarioController : MonoBehaviour
             Body.linearVelocity = Vector2.zero;
             Body.angularVelocity = 0f;
             Body.simulated = false;
+        }
+    }
+
+    private IEnumerator AwardTimerBonusRoutine()
+    {
+        var data = ResolveGameData();
+        if (!data) yield break;
+
+        var tickInterval = Mathf.Max(0.001f, timerTickInterval);
+        var pointsPerTick = Mathf.Max(0, timerScorePerTick);
+        var remaining = Mathf.Max(0, Mathf.CeilToInt(data.timer));
+        if (remaining <= 0) yield break;
+
+        while (remaining > 0)
+        {
+            remaining--;
+            data.SetTimer(remaining);
+            if (pointsPerTick > 0)
+                data.AddScore(pointsPerTick);
+
+            yield return new WaitForSecondsRealtime(tickInterval);
         }
     }
 }

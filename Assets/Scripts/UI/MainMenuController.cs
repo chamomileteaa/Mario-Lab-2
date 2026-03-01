@@ -138,7 +138,18 @@ public class MainMenuController : MonoBehaviour
     {
         if (player1Text) player1Text.text = player1Label;
         if (player2Text) player2Text.text = player2Label;
-        if (topScoreText) topScoreText.text = string.Format(topScoreFormat, HighScoreManager.GetHighScore());
+        if (topScoreText)
+        {
+            var format = string.IsNullOrWhiteSpace(topScoreFormat) ? "{0:000000}" : topScoreFormat;
+            try
+            {
+                topScoreText.text = string.Format(format, HighScoreManager.GetHighScore());
+            }
+            catch (FormatException)
+            {
+                topScoreText.text = HighScoreManager.GetHighScore().ToString("000000");
+            }
+        }
     }
 
     private CanvasGroup GetOrAddCanvasGroup()

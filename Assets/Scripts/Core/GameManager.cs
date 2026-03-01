@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
@@ -22,17 +21,16 @@ public class GameManager : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioClip pauseToggleSfx;
 
-    [Header("Reset Flow")]
-    [SerializeField] private bool reloadSceneWhenReturningToMenu = true;
-    [SerializeField] private UnityEvent inSceneResetActions;
-
     private const PauseType GameplayPauseTypes = PauseType.Physics | PauseType.Animation | PauseType.Input;
-    private static bool forceMainMenuOnNextSceneLoad;
+    private static bool forceMainMenuOnNextLoad;
 
     private GameData gameData;
     private bool userPaused;
     private AudioPlayer audioPlayer;
+    private MusicPlayer musicPlayer;
+
     private AudioPlayer AudioPlayer => audioPlayer ? audioPlayer : audioPlayer = GetComponent<AudioPlayer>();
+    private MusicPlayer Music => musicPlayer ? musicPlayer : musicPlayer = FindFirstObjectByType<MusicPlayer>(FindObjectsInactive.Include);
 
     public static GameManager Instance { get; private set; }
 
@@ -58,9 +56,10 @@ public class GameManager : MonoBehaviour
         if (!ui)
             Debug.LogWarning("GameManager could not find a HudController in scene.", this);
 
-        if (ConsumeForcedMainMenuRequest())
+        if (forceMainMenuOnNextLoad)
         {
-            gameData?.ResetAll();
+            forceMainMenuOnNextLoad = false;
+            if (gameData) gameData.ResetAll();
             ShowMainMenu();
             return;
         }
@@ -83,56 +82,53 @@ public class GameManager : MonoBehaviour
     public void ShowMainMenu()
     {
         ResolveSceneReferences();
+
+        if (!gameData) gameData = GameData.GetOrCreate();
+        gameData.EndRun();
+
         ClearUserPause();
         PauseService.Pause(GameplayPauseTypes);
-        if (cameraController) cameraController.EnterMainMenuMode();
-        if (ui) ui.SetVisible(false);
 
+        Music?.PlayNameEntryTheme();
+        if (cameraController) cameraController.EnterMainMenuMode();
+
+        if (ui) ui.SetVisible(false);
         if (introOverlay) introOverlay.HideInstant();
         if (gameOverOverlay) gameOverOverlay.HideInstant();
-        if (mainMenu)
-            mainMenu.Show(HandleStartPressed);
+        if (pauseOverlay) pauseOverlay.HideInstant();
+        if (mainMenu) mainMenu.Show(HandleStartPressed);
     }
 
     public void StartNewRun()
     {
-        forceMainMenuOnNextSceneLoad = false;
+        forceMainMenuOnNextLoad = false;
+        if (!gameData) gameData = GameData.GetOrCreate();
         gameData.ResetAll();
         gameData.BeginRun();
         StartLevelFlow();
     }
 
-    public void ReloadCurrentLevel()
+    public void ReloadSceneForRetry()
     {
-        ResolveSceneReferences();
-        ClearUserPause();
-        PauseService.Resume(GameplayPauseTypes);
-        var scene = SceneManager.GetActiveScene();
-        SceneManager.LoadScene(scene.name);
-    }
-
-    public void CompleteRunAndReturnToMainMenu()
-    {
-        ReturnToMainMenu();
-    }
-
-    public void ReturnToMainMenu()
-    {
-        ResolveSceneReferences();
+        forceMainMenuOnNextLoad = false;
         if (!gameData) gameData = GameData.GetOrCreate();
-        gameData?.ResetAll();
+        gameData.BeginRun();
+        ReloadActiveScene();
+    }
+
+    public void ReloadSceneToMainMenu()
+    {
+        forceMainMenuOnNextLoad = true;
+        if (!gameData) gameData = GameData.GetOrCreate();
+        gameData.ResetAll();
+        ReloadActiveScene();
+    }
+
+    private void ReloadActiveScene()
+    {
         ClearUserPause();
-        PauseService.Resume(GameplayPauseTypes);
+        PauseService.ClearAll();
 
-        if (!reloadSceneWhenReturningToMenu)
-        {
-            inSceneResetActions?.Invoke();
-            forceMainMenuOnNextSceneLoad = false;
-            ShowMainMenu();
-            return;
-        }
-
-        forceMainMenuOnNextSceneLoad = true;
         var scene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(scene.name);
     }
@@ -147,12 +143,13 @@ public class GameManager : MonoBehaviour
         ResolveSceneReferences();
         ClearUserPause();
 
-        // Release any existing lock (for example, from main menu) before re-pausing for intro.
         PauseService.Resume(GameplayPauseTypes);
         PauseService.Pause(GameplayPauseTypes);
+
         if (mainMenu) mainMenu.HideInstant();
         if (gameOverOverlay) gameOverOverlay.HideInstant();
         if (cameraController) cameraController.ExitMainMenuMode();
+        Music?.OnGameplayRunStarted();
 
         if (ui) ui.BeginLevel();
         if (ui) ui.SetVisible(false);
@@ -264,12 +261,4 @@ public class GameManager : MonoBehaviour
         if (!pauseToggleSfx) return;
         AudioPlayer?.PlayOneShot(pauseToggleSfx);
     }
-
-    private static bool ConsumeForcedMainMenuRequest()
-    {
-        if (!forceMainMenuOnNextSceneLoad) return false;
-        forceMainMenuOnNextSceneLoad = false;
-        return true;
-    }
-
 }

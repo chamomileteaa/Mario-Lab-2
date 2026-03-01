@@ -36,6 +36,7 @@ public class HudController : MonoBehaviour
     {
         _ = CanvasGroup;
         gameData = GameData.GetOrCreate();
+        SetVisible(gameData && gameData.runActive);
         SubscribeData(true);
         SubscribeCamera(true);
         ValidateReferences();
@@ -54,6 +55,8 @@ public class HudController : MonoBehaviour
         if (!timerEnabled) return;
         if (!gameData || !gameData.runActive) return;
         if (PauseService.IsPaused(PauseType.Physics)) return;
+        var currentMario = ResolveMario();
+        if (currentMario && (currentMario.IsWinning || currentMario.IsDead)) return;
 
         var remaining = Mathf.Max(0f, gameData.timer - Time.deltaTime);
         gameData.SetTimer(remaining);

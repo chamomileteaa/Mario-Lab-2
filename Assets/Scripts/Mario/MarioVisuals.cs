@@ -42,6 +42,14 @@ public class MarioVisuals : MonoBehaviour
     [SerializeField, Min(1)] private int starFastFramesPerStep = 4;
     [SerializeField, Min(1)] private int starSlowFramesPerStep = 8;
 
+    [Header("Star End Warning")]
+    [SerializeField, Min(0f)] private float starWarningDuration = 2f;
+    [SerializeField, Range(0.05f, 1f)] private float starWarningMinAlpha = 0.25f;
+    [SerializeField, Min(1f)] private float starWarningFlickerSpeed = 22f;
+    [SerializeField, Min(0f)] private float postStarFlickerDuration = 0.35f;
+    [SerializeField, Range(0.05f, 1f)] private float postStarFlickerMinAlpha = 0.25f;
+    [SerializeField, Min(1f)] private float postStarFlickerSpeed = 24f;
+
     private MarioController marioController;
     private Rigidbody2D body2D;
     private AnimatorCache animatorCache;
@@ -54,6 +62,8 @@ public class MarioVisuals : MonoBehaviour
     private bool starPaletteApplied;
     private int lastAppliedStarPaletteIndex = -1;
     private float forcedStarVisualTimer;
+    private float postStarFlickerTimer;
+    private bool wasStarPowered;
 
     private MarioController Mario => marioController ? marioController : marioController = GetComponent<MarioController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
@@ -75,6 +85,7 @@ public class MarioVisuals : MonoBehaviour
         if (!Mario || Mario.IsDead) return;
         if (forcedStarVisualTimer > 0f)
             forcedStarVisualTimer = Mathf.Max(0f, forcedStarVisualTimer - Time.deltaTime);
+        UpdateStarWarningTimers();
         UpdateSpriteDirection();
         SyncAnimator();
         UpdateSpriteVisuals();
@@ -106,6 +117,8 @@ public class MarioVisuals : MonoBehaviour
     public void ResetVisuals()
     {
         forcedStarVisualTimer = 0f;
+        postStarFlickerTimer = 0f;
+        wasStarPowered = false;
         DisableStarPaletteShader();
         ApplySpriteVisuals(1f);
     }
@@ -113,6 +126,8 @@ public class MarioVisuals : MonoBehaviour
     private void OnDisable()
     {
         forcedStarVisualTimer = 0f;
+        postStarFlickerTimer = 0f;
+        wasStarPowered = false;
         DisableStarPaletteShader();
     }
 
@@ -158,6 +173,14 @@ public class MarioVisuals : MonoBehaviour
         {
             var pulse = Mathf.PingPong(Time.time * invulnerabilityFlickerSpeed, 1f);
             alpha = Mathf.Lerp(invulnerabilityMinAlpha, 1f, pulse);
+        }
+        else if (ShouldUseStarEndingWarningFlicker())
+        {
+            alpha = EvaluateFlickerAlpha(starWarningMinAlpha, starWarningFlickerSpeed);
+        }
+        else if (postStarFlickerTimer > 0f)
+        {
+            alpha = EvaluateFlickerAlpha(postStarFlickerMinAlpha, postStarFlickerSpeed);
         }
 
         var useStarVisual = Mario.IsStarPowered || forcedStarVisualTimer > 0f;
@@ -280,6 +303,30 @@ public class MarioVisuals : MonoBehaviour
         var useSlowCycle = Mario.StarPowerTimeRemaining <= starSlowPhaseSeconds;
         var framesPerStep = Mathf.Max(1, useSlowCycle ? starSlowFramesPerStep : starFastFramesPerStep);
         return (nesFrame / framesPerStep) & StarPaletteMask;
+    }
+
+    private void UpdateStarWarningTimers()
+    {
+        var isStarPowered = Mario.IsStarPowered;
+        if (wasStarPowered && !isStarPowered && postStarFlickerDuration > 0f)
+            postStarFlickerTimer = Mathf.Max(postStarFlickerTimer, postStarFlickerDuration);
+
+        wasStarPowered = isStarPowered;
+        if (postStarFlickerTimer > 0f)
+            postStarFlickerTimer = Mathf.Max(0f, postStarFlickerTimer - Time.deltaTime);
+    }
+
+    private bool ShouldUseStarEndingWarningFlicker()
+    {
+        if (!Mario.IsStarPowered) return false;
+        if (starWarningDuration <= 0f) return false;
+        return Mario.StarPowerTimeRemaining <= starWarningDuration;
+    }
+
+    private static float EvaluateFlickerAlpha(float minAlpha, float speed)
+    {
+        var pulse = Mathf.PingPong(Time.time * Mathf.Max(1f, speed), 1f);
+        return Mathf.Lerp(Mathf.Clamp01(minAlpha), 1f, pulse);
     }
 
     private void ApplySpriteVisuals(float alpha)

@@ -69,7 +69,7 @@ public class FlagpoleController : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (triggered) return;
-        if (!other.CompareTag("Player")) return;
+        if (!other.CompareColliderTag("Player")) return;
 
         var mario = other.GetComponentInParent<MarioController>();
         if (!mario || mario.IsDead || mario.IsWinning) return;
@@ -77,7 +77,7 @@ public class FlagpoleController : MonoBehaviour
         triggered = true;
         TriggerCollider.enabled = false;
 
-        var contactY = ResolveContactY(other);
+        var contactY = ResolveContactY(mario, other);
         var normalizedHeight = ResolveNormalizedHeight(contactY);
         var score = ResolveScore(normalizedHeight);
 
@@ -122,21 +122,26 @@ public class FlagpoleController : MonoBehaviour
         return poleAttachPoint ? poleAttachPoint.position.x : TriggerCollider.bounds.center.x;
     }
 
-    private float ResolveContactY(Collider2D marioCollider)
+    private float ResolveContactY(MarioController mario, Collider2D fallbackCollider)
     {
-        if (!marioCollider) return TriggerCollider.bounds.center.y;
+        var boundsMinY = ResolvePoleBottomY();
+        var boundsMaxY = ResolvePoleTopY();
+        if (boundsMaxY <= boundsMinY) return boundsMinY;
 
-        // Use Mario's head height so score maps to where he grabbed the pole.
-        var y = marioCollider.bounds.max.y;
-        var bounds = TriggerCollider.bounds;
-        return Mathf.Clamp(y, bounds.min.y, bounds.max.y);
+        Collider2D marioCollider = null;
+        if (mario) marioCollider = mario.GetComponent<Collider2D>();
+        if (!marioCollider) marioCollider = fallbackCollider;
+
+        var sampleY = marioCollider ? marioCollider.bounds.max.y : (mario ? mario.transform.position.y : TriggerCollider.bounds.center.y);
+        return Mathf.Clamp(sampleY, boundsMinY, boundsMaxY);
     }
 
     private float ResolveNormalizedHeight(float y)
     {
-        var bounds = TriggerCollider.bounds;
-        if (bounds.size.y <= Mathf.Epsilon) return 0f;
-        return Mathf.InverseLerp(bounds.min.y, bounds.max.y, y);
+        var minY = ResolvePoleBottomY();
+        var maxY = ResolvePoleTopY();
+        if (maxY <= minY) return 0f;
+        return Mathf.Clamp01(Mathf.InverseLerp(minY, maxY, y));
     }
 
     private int ResolveScore(float normalizedHeight)
@@ -229,6 +234,18 @@ public class FlagpoleController : MonoBehaviour
         if (poleFlagBottomPoint) return poleFlagBottomPoint.position.y;
         if (poleBottomPoint) return poleBottomPoint.position.y;
         return TriggerCollider.bounds.min.y;
+    }
+
+    private float ResolvePoleBottomY()
+    {
+        if (poleBottomPoint) return poleBottomPoint.position.y;
+        return TriggerCollider.bounds.min.y;
+    }
+
+    private float ResolvePoleTopY()
+    {
+        if (poleFlagTopPoint) return poleFlagTopPoint.position.y;
+        return TriggerCollider.bounds.max.y;
     }
 
 }
