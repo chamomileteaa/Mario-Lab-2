@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody2D))]
@@ -10,7 +11,8 @@ public class BrickCoin : MonoBehaviour
     [SerializeField, Min(0)] private int scoreValue = 200;
     [SerializeField] private GameObject scorePopupPrefab;
     [SerializeField] private Vector3 scorePopupOffset = new Vector3(0f, 0.35f, 0f);
-    [SerializeField] private AudioCue collectCue;
+    [FormerlySerializedAs("collectCue")]
+    [SerializeField] private AudioClip collectClip;
 
     private Rigidbody2D body2D;
     private Animator animatorComponent;
@@ -26,8 +28,7 @@ public class BrickCoin : MonoBehaviour
         isDespawning = false;
         spawnPosition = transform.position;
 
-        if (collectCue && collectCue.clip)
-            AudioSource.PlayClipAtPoint(collectCue.clip, spawnPosition, collectCue.volume);
+        AudioPlayer.PlayAtPoint(collectClip, spawnPosition);
 
         RestartAnimation();
         Launch();

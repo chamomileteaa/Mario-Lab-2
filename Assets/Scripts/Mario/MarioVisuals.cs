@@ -43,6 +43,7 @@ public class MarioVisuals : MonoBehaviour
     private MarioController marioController;
     private Rigidbody2D body2D;
     private AnimatorCache animatorCache;
+    private Animator animator;
     private SpriteFlipper spriteFlipper;
     private SpriteRenderer[] spriteRenderers;
     private Color[] spriteBaseColors;
@@ -54,6 +55,7 @@ public class MarioVisuals : MonoBehaviour
     private MarioController Mario => marioController ? marioController : marioController = GetComponent<MarioController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
+    private Animator Animator => animator ? animator : animator = GetComponent<Animator>();
     private SpriteFlipper Flipper => spriteFlipper ? spriteFlipper : spriteFlipper = GetComponentInChildren<SpriteFlipper>(true);
     private SpriteRenderer[] SpriteRenderers => spriteRenderers != null && spriteRenderers.Length > 0
         ? spriteRenderers
@@ -75,6 +77,13 @@ public class MarioVisuals : MonoBehaviour
     public void PlayDeath()
     {
         Anim.TrySetTrigger(DieTrigger);
+    }
+
+    public float GetFormTransitionDuration(bool grew)
+    {
+        var token = grew ? GrowTrigger : ShrinkTrigger;
+        var clip = FindTransitionClip(token);
+        return clip ? clip.length : 0f;
     }
 
     public void ResetVisuals()
@@ -272,5 +281,32 @@ public class MarioVisuals : MonoBehaviour
         if (Mathf.Abs(inputX) <= InputDeadzone) return false;
         if (Mathf.Abs(velocityX) <= InputDeadzone) return false;
         return Mathf.Sign(inputX) != Mathf.Sign(velocityX);
+    }
+
+    private AnimationClip FindTransitionClip(string token)
+    {
+        var controller = Animator ? Animator.runtimeAnimatorController : null;
+        if (!controller) return null;
+
+        var clips = controller.animationClips;
+        if (clips == null || clips.Length == 0) return null;
+
+        for (var i = 0; i < clips.Length; i++)
+        {
+            var clip = clips[i];
+            if (!clip) continue;
+            if (string.Equals(clip.name, token, System.StringComparison.OrdinalIgnoreCase))
+                return clip;
+        }
+
+        for (var i = 0; i < clips.Length; i++)
+        {
+            var clip = clips[i];
+            if (!clip) continue;
+            if (clip.name.IndexOf(token, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return clip;
+        }
+
+        return null;
     }
 }

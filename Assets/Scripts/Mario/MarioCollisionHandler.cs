@@ -14,15 +14,6 @@ public class MarioCollisionHandler : MonoBehaviour
     private const string StarmanTag = "Starman";
     private const string OneUpMushroomTag = "OneUpMushroom";
 
-    private const string OneUpToken = "1up";
-    private const string OneUpAltToken = "oneup";
-    private const string RedMushroomToken = "redmushroom";
-    private const string SuperMushroomToken = "supermushroom";
-    private const string FireFlowerToken = "fireflower";
-    private const string StarmanToken = "starman";
-    private const string InvincibilityStarToken = "invincibility star";
-    private const string CoinToken = "coin";
-
     [Header("Collectibles")]
     [SerializeField] private UIScript ui;
 
@@ -32,12 +23,12 @@ public class MarioCollisionHandler : MonoBehaviour
     [SerializeField, Min(0f)] private float stompContactPointTolerance = 0.08f;
     [SerializeField, Min(0f)] private float stompSideTolerance = 0.18f;
     [SerializeField, Min(0f)] private float stompMaxUpwardVelocity = 0.75f;
-    [SerializeField] private MarioAudio CollectableSFX;
 
     private MarioController marioController;
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
     private readonly Dictionary<int, CachedEnemyHandlers> enemyHandlersByColliderId = new Dictionary<int, CachedEnemyHandlers>(64);
+    private readonly Collider2D[] overlapHits = new Collider2D[12];
 
     private MarioController Mario => marioController ? marioController : marioController = GetComponent<MarioController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
@@ -51,6 +42,11 @@ public class MarioCollisionHandler : MonoBehaviour
     private void OnDisable()
     {
         enemyHandlersByColliderId.Clear();
+    }
+
+    private void FixedUpdate()
+    {
+        TryHandleCollectiblesInContact();
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
@@ -96,7 +92,7 @@ public class MarioCollisionHandler : MonoBehaviour
         if (!Mario || Mario.IsDead) return;
         var enemyCollider = ResolveEnemyCollider(collision);
         if (!enemyCollider) return;
-        var isStompContact = IsStompCollision(collision, enemyCollider.bounds);
+        var isStompContact = IsStompContact(enemyCollider.bounds);
         TryHandleEnemyContact(enemyCollider, isStompContact);
     }
 
@@ -106,7 +102,7 @@ public class MarioCollisionHandler : MonoBehaviour
         if (!collision || IsOwnCollider(collision)) return;
         if (!IsEnemyCollider(collision)) return;
 
-        var isStompContact = Body.linearVelocity.y <= stompMaxUpwardVelocity && IsStompContact(collision.bounds);
+        var isStompContact = IsStompContact(collision.bounds);
         TryHandleEnemyContact(collision, isStompContact);
     }
 
@@ -121,8 +117,8 @@ public class MarioCollisionHandler : MonoBehaviour
         var stompHandler = cachedHandlers.StompHandler;
         var knockbackHandler = cachedHandlers.KnockbackHandler;
 
-        var contactPoint = (Vector2)BodyCollider.bounds.center;
-        var sourcePosition = (Vector2)transform.position;
+        var contactPoint = GetMarioFeetPosition();
+        var sourcePosition = contactPoint;
 
         if (Mario.IsStarPowered)
         {
@@ -158,42 +154,44 @@ public class MarioCollisionHandler : MonoBehaviour
         return null;
     }
 
-    private bool IsStompCollision(Collision2D collision, Bounds enemyBounds)
-    {
-        if (Body.linearVelocity.y > stompMaxUpwardVelocity) return false;
-        if (BodyCollider.bounds.center.y <= enemyBounds.center.y + 0.01f) return false;
-        if (HasFeetContact(collision, enemyBounds)) return true;
-        return IsStompContact(enemyBounds);
-    }
-
     private bool IsStompContact(Bounds enemyBounds)
     {
-        var marioBounds = BodyCollider.bounds;
-        var horizontalOverlap = Mathf.Min(marioBounds.max.x, enemyBounds.max.x) - Mathf.Max(marioBounds.min.x, enemyBounds.min.x);
-        if (horizontalOverlap < -stompSideTolerance) return false;
+        var velocityY = Body.linearVelocity.y;
+        if (velocityY > stompMaxUpwardVelocity) return false;
+        if (velocityY > 0f) return false;
 
-        var feetGap = marioBounds.min.y - enemyBounds.max.y;
-        if (feetGap > stompContactGap.max) return false;
-        if (marioBounds.min.y <= enemyBounds.min.y) return false;
+        var marioFeet = GetMarioFeetPosition();
+        var marioBounds = BodyCollider.bounds;
+        var marioFeetMinX = marioBounds.min.x;
+        var marioFeetMaxX = marioBounds.max.x;
+        if (marioFeetMaxX < enemyBounds.min.x - stompSideTolerance) return false;
+        if (marioFeetMinX > enemyBounds.max.x + stompSideTolerance) return false;
+
+        var minGap = stompContactGap.min - stompContactPointTolerance;
+        var maxGap = stompContactGap.max + stompContactPointTolerance;
+        var feetGap = marioFeet.y - enemyBounds.max.y;
+        if (feetGap < minGap) return false;
+        if (feetGap > maxGap) return false;
+
+        var previousFeetY = marioFeet.y - velocityY * Time.fixedDeltaTime;
+        if (previousFeetY < enemyBounds.max.y - stompContactPointTolerance) return false;
+
         return true;
     }
 
-    private bool HasFeetContact(Collision2D collision, Bounds enemyBounds)
+    private void TryHandleCollectiblesInContact()
     {
-        var marioBounds = BodyCollider.bounds;
-        var marioFeetY = marioBounds.min.y + stompContactPointTolerance;
-        var minContactX = enemyBounds.min.x - stompSideTolerance;
-        var maxContactX = enemyBounds.max.x + stompSideTolerance;
-        var minContactY = enemyBounds.center.y - stompContactPointTolerance;
-        var count = collision.contactCount;
+        if (!BodyCollider || !Mario || Mario.IsDead) return;
+
+        var filter = new ContactFilter2D { useTriggers = true };
+        var count = BodyCollider.Overlap(filter, overlapHits);
         for (var i = 0; i < count; i++)
         {
-            var point = collision.GetContact(i).point;
-            if (point.y <= marioFeetY && point.y >= minContactY && point.x >= minContactX && point.x <= maxContactX)
-                return true;
+            var hit = overlapHits[i];
+            overlapHits[i] = null;
+            if (!hit) continue;
+            if (TryHandleCollectible(hit)) break;
         }
-
-        return false;
     }
 
     private bool IsOwnCollider(Collider2D collider)
@@ -201,9 +199,22 @@ public class MarioCollisionHandler : MonoBehaviour
         return collider && collider == BodyCollider;
     }
 
+    private Vector2 GetMarioFeetPosition()
+    {
+        var bounds = BodyCollider.bounds;
+        return new Vector2(bounds.center.x, bounds.min.y);
+    }
+
     private static bool IsEnemyCollider(Collider2D collider)
     {
-        return collider && collider.CompareColliderTag(EnemyTag);
+        if (!collider) return false;
+        if (collider.CompareColliderTag(EnemyTag)) return true;
+
+        if (collider.attachedRigidbody && collider.attachedRigidbody.CompareTag(EnemyTag))
+            return true;
+
+        var root = collider.transform ? collider.transform.root : null;
+        return root && root.CompareTag(EnemyTag);
     }
 
     private CollectibleType ResolveCollectibleType(Collider2D collision, GameObject collectibleObject)
@@ -217,12 +228,8 @@ public class MarioCollisionHandler : MonoBehaviour
         var lookupObject = collectibleObject ? collectibleObject : collision.gameObject;
         if (!lookupObject) return CollectibleType.None;
 
-        var normalizedName = lookupObject.name.ToLowerInvariant();
-        if (normalizedName.Contains(OneUpToken) || normalizedName.Contains(OneUpAltToken)) return CollectibleType.OneUp;
-        if (normalizedName.Contains(SuperMushroomToken) || normalizedName.Contains(RedMushroomToken)) return CollectibleType.RedMushroom;
-        if (normalizedName.Contains(FireFlowerToken)) return CollectibleType.FireFlower;
-        if (normalizedName.Contains(InvincibilityStarToken) || normalizedName.Contains(StarmanToken)) return CollectibleType.Starman;
-        if (normalizedName.Contains(CoinToken)) return CollectibleType.Coin;
+        if (lookupObject.TryGetComponent<BrickCoin>(out _)) return CollectibleType.Coin;
+
         return CollectibleType.None;
     }
 
@@ -239,18 +246,17 @@ public class MarioCollisionHandler : MonoBehaviour
         {
             case CollectibleType.Coin:
                 GameData.Instance.AddCoin();
+                Mario.NotifyCoinCollected();
                 return;
 
             case CollectibleType.RedMushroom:
                 Mario.SetForm(MarioController.MarioForm.Big);
-                CollectableSFX.PlayGrow();
-                Mario.ActivateSuper();
+                Mario.ActivateFormProtection();
                 return;
 
             case CollectibleType.FireFlower:
                 Mario.SetForm(MarioController.MarioForm.Fire);
-                CollectableSFX.PlayGrow();
-                Mario.ActivateSuper();
+                Mario.ActivateFormProtection();
                 return;
 
             case CollectibleType.Starman:
@@ -258,7 +264,7 @@ public class MarioCollisionHandler : MonoBehaviour
                 return;
 
             case CollectibleType.OneUp:
-                CollectableSFX.PlayLifeUp();
+                Mario.NotifyExtraLifeCollected();
                 GameData.Instance.AddLife();
                 return;
         }

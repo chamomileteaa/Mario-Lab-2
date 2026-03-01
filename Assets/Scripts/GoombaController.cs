@@ -4,6 +4,7 @@ using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(EntityController))]
+[RequireComponent(typeof(GoombaAudio))]
 [RequireComponent(typeof(AnimatorCache))]
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
@@ -22,14 +23,12 @@ public class GoombaController : MonoBehaviour, IStompHandler
     [SerializeField] private bool defeatWhenKnockedBack = true;
     [SerializeField, Min(0.5f)] private float despawnBelowSpawnDistance = 12f;
 
-    [SerializeField] private EnemyAudio enemySFX;
-
     private EntityController entityController;
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
     private Animator animatorComponent;
     private AnimatorCache animatorCache;
-    private EnemyAudio enemyAudio;
+    private GoombaAudio goombaAudio;
     private Coroutine squishRoutine;
     private float initialGravityScale = 1f;
     private string initialTag;
@@ -42,7 +41,7 @@ public class GoombaController : MonoBehaviour, IStompHandler
     private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
     private Animator Animator => animatorComponent ? animatorComponent : animatorComponent = GetComponent<Animator>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
-    private EnemyAudio Audio => enemyAudio ? enemyAudio : enemyAudio = GetComponent<EnemyAudio>();
+    private GoombaAudio Audio => goombaAudio ? goombaAudio : goombaAudio = GetComponent<GoombaAudio>();
     public GameObject ScorePopupPrefab => scorePopupPrefab;
 
     private void Awake()
@@ -50,8 +49,6 @@ public class GoombaController : MonoBehaviour, IStompHandler
         spawnY = transform.position.y;
         initialGravityScale = Body.gravityScale;
         initialTag = gameObject.tag;
-
-        enemySFX = GetComponent<EnemyAudio>();
     }
 
     private void OnEnable()
@@ -98,7 +95,7 @@ public class GoombaController : MonoBehaviour, IStompHandler
         SetDefeatedState();
         squished = true;
         
-        enemySFX.PlayDeath();
+        Audio?.PlayStompDefeat();
 
         Entity.SetMovementEnabled(false);
         Body.linearVelocity = Vector2.zero;
@@ -136,7 +133,7 @@ public class GoombaController : MonoBehaviour, IStompHandler
         if (impactType != EnemyImpactType.Star && !defeatWhenKnockedBack) return;
         if (defeated) return;
         SetDefeatedState();
-        Audio?.PlayDeath();
+        Audio?.PlayKnockbackDefeat();
     }
 
     private IEnumerator DespawnAfter(float delay)
