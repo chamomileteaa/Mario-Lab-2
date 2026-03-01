@@ -8,12 +8,6 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(AudioPlayer))]
 public class GameManager : MonoBehaviour
 {
-    private enum MainMenuResetMode
-    {
-        ReloadScene = 0,
-        InScene = 1
-    }
-
     [Header("Scene References")]
     [SerializeField] private HudController ui;
     [SerializeField] private MainMenuController mainMenu;
@@ -29,10 +23,11 @@ public class GameManager : MonoBehaviour
     [SerializeField] private AudioClip pauseToggleSfx;
 
     [Header("Reset Flow")]
-    [SerializeField] private MainMenuResetMode mainMenuResetMode = MainMenuResetMode.ReloadScene;
+    [SerializeField] private bool reloadSceneWhenReturningToMenu = true;
     [SerializeField] private UnityEvent inSceneResetActions;
 
     private const PauseType GameplayPauseTypes = PauseType.Physics | PauseType.Animation | PauseType.Input;
+    private static bool forceMainMenuOnNextSceneLoad;
 
     private GameData gameData;
     private bool userPaused;
@@ -63,6 +58,13 @@ public class GameManager : MonoBehaviour
         if (!ui)
             Debug.LogWarning("GameManager could not find a HudController in scene.", this);
 
+        if (ConsumeForcedMainMenuRequest())
+        {
+            gameData?.ResetAll();
+            ShowMainMenu();
+            return;
+        }
+
         if (!gameData.runActive)
         {
             ShowMainMenu();
@@ -80,10 +82,11 @@ public class GameManager : MonoBehaviour
 
     public void ShowMainMenu()
     {
+        ResolveSceneReferences();
         ClearUserPause();
         PauseService.Pause(GameplayPauseTypes);
-        cameraController?.EnterMainMenuMode();
-        ui?.SetVisible(false);
+        if (cameraController) cameraController.EnterMainMenuMode();
+        if (ui) ui.SetVisible(false);
 
         if (introOverlay) introOverlay.HideInstant();
         if (gameOverOverlay) gameOverOverlay.HideInstant();
@@ -93,6 +96,7 @@ public class GameManager : MonoBehaviour
 
     public void StartNewRun()
     {
+        forceMainMenuOnNextSceneLoad = false;
         gameData.ResetAll();
         gameData.BeginRun();
         StartLevelFlow();
@@ -100,6 +104,7 @@ public class GameManager : MonoBehaviour
 
     public void ReloadCurrentLevel()
     {
+        ResolveSceneReferences();
         ClearUserPause();
         PauseService.Resume(GameplayPauseTypes);
         var scene = SceneManager.GetActiveScene();
@@ -108,19 +113,28 @@ public class GameManager : MonoBehaviour
 
     public void CompleteRunAndReturnToMainMenu()
     {
+        ReturnToMainMenu();
+    }
+
+    public void ReturnToMainMenu()
+    {
+        ResolveSceneReferences();
         if (!gameData) gameData = GameData.GetOrCreate();
         gameData?.ResetAll();
         ClearUserPause();
         PauseService.Resume(GameplayPauseTypes);
 
-        if (mainMenuResetMode == MainMenuResetMode.ReloadScene)
+        if (!reloadSceneWhenReturningToMenu)
         {
-            ReloadCurrentLevel();
+            inSceneResetActions?.Invoke();
+            forceMainMenuOnNextSceneLoad = false;
+            ShowMainMenu();
             return;
         }
 
-        inSceneResetActions?.Invoke();
-        ShowMainMenu();
+        forceMainMenuOnNextSceneLoad = true;
+        var scene = SceneManager.GetActiveScene();
+        SceneManager.LoadScene(scene.name);
     }
 
     private void HandleStartPressed()
@@ -138,23 +152,23 @@ public class GameManager : MonoBehaviour
         PauseService.Pause(GameplayPauseTypes);
         if (mainMenu) mainMenu.HideInstant();
         if (gameOverOverlay) gameOverOverlay.HideInstant();
-        cameraController?.ExitMainMenuMode();
+        if (cameraController) cameraController.ExitMainMenuMode();
 
-        ui?.BeginLevel();
-        ui?.SetVisible(false);
+        if (ui) ui.BeginLevel();
+        if (ui) ui.SetVisible(false);
 
         var lives = gameData ? gameData.lives : 3;
         var world = gameData && !string.IsNullOrWhiteSpace(gameData.world) ? gameData.world : "-";
         if (!introOverlay)
         {
             ResumeGameplay();
-            ui?.SetVisible(true);
+            if (ui) ui.SetVisible(true);
             return;
         }
 
         introOverlay.Show(lives, world, () =>
         {
-            ui?.SetVisible(true);
+            if (ui) ui.SetVisible(true);
             ResumeGameplay();
         });
     }
@@ -215,31 +229,33 @@ public class GameManager : MonoBehaviour
 
     private void TogglePause()
     {
+        ResolveSceneReferences();
         if (userPaused)
         {
             userPaused = false;
-            pauseOverlay?.HideInstant();
+            if (pauseOverlay) pauseOverlay.HideInstant();
             PauseService.Resume(GameplayPauseTypes);
             PlayPauseToggleSfx();
             return;
         }
 
         userPaused = true;
-        pauseOverlay?.Show();
+        if (pauseOverlay) pauseOverlay.Show();
         PauseService.Pause(GameplayPauseTypes);
         PlayPauseToggleSfx();
     }
 
     private void ClearUserPause()
     {
+        ResolveSceneReferences();
         if (!userPaused)
         {
-            pauseOverlay?.HideInstant();
+            if (pauseOverlay) pauseOverlay.HideInstant();
             return;
         }
 
         userPaused = false;
-        pauseOverlay?.HideInstant();
+        if (pauseOverlay) pauseOverlay.HideInstant();
         PauseService.Resume(GameplayPauseTypes);
     }
 
@@ -247,6 +263,13 @@ public class GameManager : MonoBehaviour
     {
         if (!pauseToggleSfx) return;
         AudioPlayer?.PlayOneShot(pauseToggleSfx);
+    }
+
+    private static bool ConsumeForcedMainMenuRequest()
+    {
+        if (!forceMainMenuOnNextSceneLoad) return false;
+        forceMainMenuOnNextSceneLoad = false;
+        return true;
     }
 
 }

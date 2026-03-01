@@ -25,14 +25,20 @@ public class MarioCollisionHandler : MonoBehaviour
     [SerializeField, Min(0.1f)] private float stompBounceSpeed = 12f;
     [SerializeField, MinMaxInt(-1f, 1f)] private MinMaxFloat stompContactGap = new MinMaxFloat(-0.55f, 0.3f);
     [SerializeField, Min(0f)] private float stompContactPointTolerance = 0.08f;
+    [SerializeField, Min(0f)] private float stompTopLeeway = 0.18f;
     [SerializeField, Min(0f)] private float stompSideTolerance = 0.18f;
     [SerializeField, Min(0f)] private float stompMaxUpwardVelocity = 0.75f;
+
+    [Header("Stomp Combo")]
+    [SerializeField] private bool useStompComboScoring = true;
+    [SerializeField] private int[] stompComboScores = { 100, 200, 400, 800, 1000, 2000, 4000, 8000 };
 
     private MarioController marioController;
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
     private readonly Dictionary<int, CachedEnemyHandlers> enemyHandlersByColliderId = new Dictionary<int, CachedEnemyHandlers>(64);
     private readonly Collider2D[] overlapHits = new Collider2D[12];
+    private int stompChainCount;
 
     private MarioController Mario => marioController ? marioController : marioController = GetComponent<MarioController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
@@ -46,10 +52,12 @@ public class MarioCollisionHandler : MonoBehaviour
     private void OnDisable()
     {
         enemyHandlersByColliderId.Clear();
+        stompChainCount = 0;
     }
 
     private void FixedUpdate()
     {
+        UpdateStompChain();
         TryHandleCollectiblesInContact();
     }
 
@@ -134,7 +142,7 @@ public class MarioCollisionHandler : MonoBehaviour
         if (isStompContact &&
             TryResolveImpact(
                 collider,
-                new EnemyImpactContext(EnemyImpactType.Stomp, Mario, contactPoint, sourcePosition),
+                CreateStompImpactContext(contactPoint, sourcePosition),
                 impactHandler,
                 stompHandler,
                 knockbackHandler))
@@ -143,8 +151,52 @@ public class MarioCollisionHandler : MonoBehaviour
             return true;
         }
 
+        ResetStompChain();
         Mario.TakeDamage();
         return true;
+    }
+
+    private EnemyImpactContext CreateStompImpactContext(Vector2 contactPoint, Vector2 sourcePosition)
+    {
+        if (!useStompComboScoring)
+            return new EnemyImpactContext(EnemyImpactType.Stomp, Mario, contactPoint, sourcePosition);
+
+        stompChainCount = Mathf.Max(0, stompChainCount) + 1;
+        var chainIndex = stompChainCount;
+        var score = ResolveStompComboScore(chainIndex);
+        return new EnemyImpactContext(EnemyImpactType.Stomp, Mario, contactPoint, sourcePosition, chainIndex, score);
+    }
+
+    private int ResolveStompComboScore(int chainIndex)
+    {
+        if (stompComboScores == null || stompComboScores.Length == 0)
+            return 100;
+
+        var clampedIndex = Mathf.Clamp(chainIndex - 1, 0, stompComboScores.Length - 1);
+        return Mathf.Max(0, stompComboScores[clampedIndex]);
+    }
+
+    private void UpdateStompChain()
+    {
+        if (!useStompComboScoring)
+        {
+            stompChainCount = 0;
+            return;
+        }
+
+        if (!Mario || Mario.IsDead)
+        {
+            stompChainCount = 0;
+            return;
+        }
+
+        if (Mario.IsGrounded)
+            stompChainCount = 0;
+    }
+
+    private void ResetStompChain()
+    {
+        stompChainCount = 0;
     }
 
     private Collider2D ResolveEnemyCollider(Collision2D collision)
@@ -172,7 +224,7 @@ public class MarioCollisionHandler : MonoBehaviour
         if (marioFeetMinX > enemyBounds.max.x + stompSideTolerance) return false;
 
         var minGap = stompContactGap.min - stompContactPointTolerance;
-        var maxGap = stompContactGap.max + stompContactPointTolerance;
+        var maxGap = stompContactGap.max + stompContactPointTolerance + stompTopLeeway;
         var feetGap = marioFeet.y - enemyBounds.max.y;
         if (feetGap < minGap) return false;
         if (feetGap > maxGap) return false;

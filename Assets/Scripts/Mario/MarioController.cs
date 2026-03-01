@@ -21,6 +21,7 @@ public class MarioController : MonoBehaviour
     private const float InputDeadzone = 0.01f;
     private const float CrouchThreshold = -0.5f;
     private const float MinDeathBounceSpeed = 11f;
+    private const float MinHitInvulnerabilityTime = 1.75f;
     private const string FireThrowTrigger = "throw";
     private const string FireActionName = "Attack";
     private const PauseType MarioPauseBypassTypes = PauseType.Physics | PauseType.Animation;
@@ -90,6 +91,7 @@ public class MarioController : MonoBehaviour
     [SerializeField, Min(0f)] private float poleJumpVerticalSpeed = 5f;
     [SerializeField, Min(0f)] private float postFireworksBuffer = 5f;
     [SerializeField] private bool hideMarioOnCastleEntry = true;
+    [SerializeField] private bool disableMarioAtCastleEntry = true;
 
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
@@ -109,10 +111,12 @@ public class MarioController : MonoBehaviour
     private bool pendingGrow;
     private bool isWinning;
     private bool isOnPole;
+    private bool isPipeTravelling;
     private Coroutine winRoutine;
     private float coyoteTimer;
     private float jumpBufferTimer;
     private float damageInvulnerabilityTimer;
+    private float pipeInvulnerabilityTimer;
     private float formProtectionTimer;
     private float starPowerTimer;
     private float jumpSpeed;
@@ -120,12 +124,16 @@ public class MarioController : MonoBehaviour
     private float lastSkidTime = -999f;
     private float nextFireballTime;
     private float facingDirectionX = 1f;
+    private bool forcedCrouch;
+    private bool hasForcedMoveInput;
+    private Vector2 forcedMoveInput;
     private MarioForm form;
     private MarioForm pendingGrowForm;
     private Coroutine deathRoutine;
     private Coroutine formTransitionRoutine;
     private bool deathPauseActive;
     private bool formPauseActive;
+    private bool castleEntryApplied;
     private readonly Collider2D[] groundHits = new Collider2D[4];
     private readonly ContactPoint2D[] groundContacts = new ContactPoint2D[8];
     private readonly Collider2D[] resizeHits = new Collider2D[4];
@@ -141,6 +149,7 @@ public class MarioController : MonoBehaviour
 
     public bool IsWinning => isWinning;
     public bool IsOnPole => isOnPole;
+    public bool IsPipeTravelling => isPipeTravelling;
     public MarioForm Form => form;
     public bool IsSmall => form == MarioForm.Small;
     public bool IsFormProtected => formProtectionTimer > 0f;
@@ -149,13 +158,15 @@ public class MarioController : MonoBehaviour
     public float StarPowerTimeRemaining => starPowerTimer;
     public bool IsDead => isDead;
     public bool IsGrounded => isGrounded;
-    public bool IsDamageInvulnerable => damageInvulnerabilityTimer > 0f;
+    public bool IsDamageInvulnerable => damageInvulnerabilityTimer > 0f || pipeInvulnerabilityTimer > 0f;
+    public bool IsDamageInvulnerableVisual => damageInvulnerabilityTimer > 0f;
+    public bool IsPipeInvulnerable => pipeInvulnerabilityTimer > 0f;
     public bool IsInvincible => IsStarPowered || IsDamageInvulnerable;
-    public bool IsCrouching => isGrounded && moveInput.y < CrouchThreshold;
+    public bool IsCrouching => isGrounded && (forcedCrouch || moveInput.y < CrouchThreshold);
     public bool IsJumpHeld => jumpHeld;
     public float VerticalSpeed => Body.linearVelocity.y;
     public float FullJumpTakeoffSpeed => jumpSpeed;
-    public Vector2 MoveInput => moveInput;
+    public Vector2 MoveInput => hasForcedMoveInput ? forcedMoveInput : moveInput;
     public event Action Spawned;
     public event Action Jumped;
     public event Action<MarioForm, MarioForm> FormChanged;
@@ -208,6 +219,13 @@ public class MarioController : MonoBehaviour
     private void Update()
     {
         if (isDead) return;
+        if (isPipeTravelling)
+        {
+            UpdateTimers();
+            Visuals?.RefreshVisualState();
+            return;
+        }
+
         if (isWinning)
         {
             UpdateTimers();
@@ -225,7 +243,7 @@ public class MarioController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (isDead || isWinning) return;
+        if (isDead || isWinning || isPipeTravelling) return;
 
         TryCompletePendingGrow();
         ApplyHorizontalMovement();
@@ -234,7 +252,7 @@ public class MarioController : MonoBehaviour
 
     public void TakeDamage()
     {
-        if (isDead || IsInvincible) return;
+        if (isDead || isPipeTravelling || IsInvincible) return;
 
         if (IsSmall)
         {
@@ -244,11 +262,12 @@ public class MarioController : MonoBehaviour
 
         SetForm(MarioForm.Small);
         Damaged?.Invoke();
-        damageInvulnerabilityTimer = damageInvulnerabilityTime;
+        damageInvulnerabilityTimer = Mathf.Max(damageInvulnerabilityTime, MinHitInvulnerabilityTime);
     }
 
     public void KillFromOutOfBounds()
     {
+        if (IsPipeInvulnerable) return;
         ResolveDeath();
     }
 
@@ -316,6 +335,48 @@ public class MarioController : MonoBehaviour
     public void NotifyPipeTravelled()
     {
         PipeTravelled?.Invoke();
+    }
+
+    public void ActivatePipeInvulnerability(float duration)
+    {
+        if (duration <= 0f) return;
+        pipeInvulnerabilityTimer = Mathf.Max(pipeInvulnerabilityTimer, duration);
+    }
+
+    public void SetPipeTravelState(bool travelling)
+    {
+        if (isDead && travelling) return;
+        if (isPipeTravelling == travelling) return;
+
+        isPipeTravelling = travelling;
+        if (travelling)
+        {
+            moveInput = Vector2.zero;
+            jumpHeld = false;
+            jumpBufferTimer = 0f;
+            coyoteTimer = 0f;
+            Body.linearVelocity = Vector2.zero;
+            Body.angularVelocity = 0f;
+            return;
+        }
+
+        jumpBufferTimer = 0f;
+        coyoteTimer = 0f;
+        moveInput = Vector2.zero;
+        forcedCrouch = false;
+        hasForcedMoveInput = false;
+        forcedMoveInput = Vector2.zero;
+    }
+
+    public void SetForcedCrouchState(bool state)
+    {
+        forcedCrouch = state;
+    }
+
+    public void SetForcedMoveInput(Vector2 input, bool enabled)
+    {
+        hasForcedMoveInput = enabled;
+        forcedMoveInput = enabled ? input : Vector2.zero;
     }
 
     public void NotifyKicked()
@@ -418,6 +479,7 @@ public class MarioController : MonoBehaviour
     private void UpdateTimers()
     {
         damageInvulnerabilityTimer = Mathf.Max(0f, damageInvulnerabilityTimer - Time.deltaTime);
+        pipeInvulnerabilityTimer = Mathf.Max(0f, pipeInvulnerabilityTimer - Time.deltaTime);
         if (PauseService.IsPaused(PauseType.Physics)) return;
 
         var previousStar = starPowerTimer;
@@ -527,8 +589,12 @@ public class MarioController : MonoBehaviour
         isOnPole = false;
         pendingGrow = false;
         damageInvulnerabilityTimer = 0f;
+        pipeInvulnerabilityTimer = 0f;
         formProtectionTimer = 0f;
         starPowerTimer = 0f;
+        forcedCrouch = false;
+        hasForcedMoveInput = false;
+        forcedMoveInput = Vector2.zero;
 
         moveInput = Vector2.zero;
         jumpHeld = false;
@@ -687,9 +753,6 @@ public class MarioController : MonoBehaviour
             }
         }
 
-        if (outOfLives && gameData)
-            gameData.ResetAll();
-
         if (deathSceneReloadDelay > 0f)
             yield return new WaitForSecondsRealtime(deathSceneReloadDelay);
 
@@ -702,9 +765,11 @@ public class MarioController : MonoBehaviour
         var manager = ResolveGameManager();
         if (manager)
         {
-            manager.ReloadCurrentLevel();
+            manager.ReturnToMainMenu();
             yield break;
         }
+
+        gameData?.ResetAll();
 
         var scene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(scene.name);
@@ -825,6 +890,7 @@ public class MarioController : MonoBehaviour
     {
         if (isDead || isWinning) return;
         isWinning = true;
+        castleEntryApplied = false;
         SetOnPoleState(true);
 
         moveInput = Vector2.zero;
@@ -890,17 +956,11 @@ public class MarioController : MonoBehaviour
 
         Body.linearVelocity = Vector2.zero;
         Body.angularVelocity = 0f;
+        ApplyCastleEntryState();
         onReachedCastleDoor?.Invoke();
 
         if (postFireworksBuffer > 0f)
             yield return new WaitForSeconds(postFireworksBuffer);
-
-        if (hideMarioOnCastleEntry)
-        {
-            var spriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
-            for (var i = 0; i < spriteRenderers.Length; i++)
-                if (spriteRenderers[i]) spriteRenderers[i].enabled = false;
-        }
 
         if (victoryCastleEntryDelay > 0f)
             yield return new WaitForSeconds(victoryCastleEntryDelay);
@@ -923,5 +983,31 @@ public class MarioController : MonoBehaviour
     {
         isOnPole = value;
         Anim?.TrySet("isOnPole", value);
+    }
+
+    private void ApplyCastleEntryState()
+    {
+        if (castleEntryApplied) return;
+        castleEntryApplied = true;
+
+        if (hideMarioOnCastleEntry)
+        {
+            var spriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+            for (var i = 0; i < spriteRenderers.Length; i++)
+            {
+                if (!spriteRenderers[i]) continue;
+                spriteRenderers[i].enabled = false;
+            }
+        }
+
+        if (!disableMarioAtCastleEntry) return;
+
+        if (BodyCollider) BodyCollider.enabled = false;
+        if (Body)
+        {
+            Body.linearVelocity = Vector2.zero;
+            Body.angularVelocity = 0f;
+            Body.simulated = false;
+        }
     }
 }

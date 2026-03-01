@@ -42,6 +42,7 @@ public class KoopaController : MonoBehaviour, IStompHandler
     private bool squished;
     private bool inShell;
     private bool shellMoving;
+    private bool scoreAwarded;
     
     private EntityController Entity => entityController ? entityController : entityController = GetComponent<EntityController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
@@ -65,6 +66,7 @@ public class KoopaController : MonoBehaviour, IStompHandler
         spawnY = transform.position.y;
         defeated = false;
         squished = false;
+        scoreAwarded = false;
         gameObject.tag = initialTag;
         Body.simulated = true;
         Body.gravityScale = initialGravityScale;
@@ -98,7 +100,7 @@ public class KoopaController : MonoBehaviour, IStompHandler
         if (defeated) return false;
         if (!inShell)
         {
-            SquishedOnce();
+            SquishedOnce(in context);
         }
         else if (!shellMoving)
         {
@@ -112,7 +114,7 @@ public class KoopaController : MonoBehaviour, IStompHandler
         return true;
     }
     
-    private void SquishedOnce()
+    private void SquishedOnce(in EnemyImpactContext context)
     {
         if (defeated) return;
         
@@ -132,6 +134,9 @@ public class KoopaController : MonoBehaviour, IStompHandler
         BodyCollider.enabled = false;
 
         TriggerSquishAnimation();
+        var awardedScore = ResolveStompScore(in context);
+        AwardScore(awardedScore);
+        SpawnScorePopup(awardedScore);
 
         //gameObject.tag = "Untagged";
 
@@ -212,16 +217,28 @@ public class KoopaController : MonoBehaviour, IStompHandler
     }
     
 
-    private void SpawnScorePopup()
+    private void SpawnScorePopup(int scoreValue)
     {
-        if (!scorePopupPrefab) return;
+        if (!scorePopupPrefab || scoreValue <= 0) return;
 
         var worldPosition = transform.position + scorePopupOffset;
         var popupObject = PrefabPoolService.Spawn(scorePopupPrefab, worldPosition, Quaternion.identity);
         if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
-            popup.Show(stompScore, worldPosition);
+            popup.Show(scoreValue, worldPosition);
     }
 
+    private int ResolveStompScore(in EnemyImpactContext context)
+    {
+        if (context.StompScore > 0) return context.StompScore;
+        return stompScore;
+    }
+
+    private void AwardScore(int value)
+    {
+        if (scoreAwarded) return;
+        scoreAwarded = true;
+        GameData.GetOrCreate().AddScore(Mathf.Max(0, value));
+    }
 
     
 }

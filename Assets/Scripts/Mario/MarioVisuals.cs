@@ -154,7 +154,7 @@ public class MarioVisuals : MonoBehaviour
     private void UpdateSpriteVisuals()
     {
         var alpha = 1f;
-        if (Mario.IsDamageInvulnerable)
+        if (Mario.IsDamageInvulnerableVisual)
         {
             var pulse = Mathf.PingPong(Time.time * invulnerabilityFlickerSpeed, 1f);
             alpha = Mathf.Lerp(invulnerabilityMinAlpha, 1f, pulse);

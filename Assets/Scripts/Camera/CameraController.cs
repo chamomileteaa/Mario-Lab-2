@@ -43,6 +43,10 @@ public class CameraController : MonoBehaviour
     }
 
     public event Action<CameraBounds2D> ActiveBoundsChanged;
+    public event Action<CameraEnvironmentType> ActiveEnvironmentChanged;
+
+    public CameraEnvironmentType ActiveEnvironment =>
+        ActiveBounds ? ActiveBounds.Environment : CameraEnvironmentType.Overworld;
 
     private Vector2 dampingVelocity;
     private float lockedX;
@@ -65,6 +69,7 @@ public class CameraController : MonoBehaviour
         CacheSceneBounds();
         UpdateActiveBounds();
         ApplyBackgroundColor();
+        ActiveEnvironmentChanged?.Invoke(ActiveEnvironment);
     }
 
     private void OnEnable()
@@ -144,7 +149,11 @@ public class CameraController : MonoBehaviour
     private void UpdateActiveBounds()
     {
         var point = followTarget ? (Vector2)followTarget.position : (Vector2)transform.position;
+        var previousEnvironment = ActiveEnvironment;
         ActiveBounds = PickActiveBounds(enteredBounds, sceneBounds, point);
+        var currentEnvironment = ActiveEnvironment;
+        if (currentEnvironment != previousEnvironment)
+            ActiveEnvironmentChanged?.Invoke(currentEnvironment);
     }
 
     private static CameraBounds2D PickActiveBounds(
@@ -288,8 +297,9 @@ public class CameraController : MonoBehaviour
     {
         var camera = SceneCamera;
         if (!camera) return;
+        camera.clearFlags = CameraClearFlags.SolidColor;
 
-        if (ActiveBounds && ActiveBounds.OverrideBackgroundColor)
+        if (ActiveBounds)
         {
             camera.backgroundColor = ActiveBounds.BackgroundColor;
             return;

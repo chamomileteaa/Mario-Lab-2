@@ -22,6 +22,7 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private string player2Label = "2 PLAYER GAME";
     [SerializeField] private string topScoreFormat = "TOP- {0:000000}";
     [SerializeField] private string unavailableModeMessage = "2P mode is not implemented yet.";
+    [SerializeField, Min(0f)] private float inputDebounceOnShow = 0.25f;
 
     private RectTransform root;
     private CanvasGroup canvasGroup;
@@ -29,6 +30,7 @@ public class MainMenuController : MonoBehaviour
     private Action onStart;
     private int selectedOption;
     private bool visible;
+    private float acceptInputAt;
     public bool IsVisible => visible && CanvasGroup.alpha > 0.001f;
     private RectTransform Root => root ? root : root = transform as RectTransform;
     private CanvasGroup CanvasGroup => canvasGroup ? canvasGroup : canvasGroup = GetOrAddCanvasGroup();
@@ -69,6 +71,7 @@ public class MainMenuController : MonoBehaviour
         ValidateReferences();
         onStart = startCallback;
         selectedOption = 0;
+        acceptInputAt = Time.unscaledTime + Mathf.Max(0f, inputDebounceOnShow);
         SetVisible(true);
         RefreshText();
         Canvas.ForceUpdateCanvases();
@@ -83,6 +86,8 @@ public class MainMenuController : MonoBehaviour
 
     private void HandleInput()
     {
+        if (!IsInputReady()) return;
+
         if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
         {
             selectedOption = 0;
@@ -167,6 +172,7 @@ public class MainMenuController : MonoBehaviour
     {
         selectedOption = 0;
         RefreshVisuals();
+        if (!IsInputReady()) return;
         SelectOption();
     }
 
@@ -174,7 +180,13 @@ public class MainMenuController : MonoBehaviour
     {
         selectedOption = 1;
         RefreshVisuals();
+        if (!IsInputReady()) return;
         SelectOption();
+    }
+
+    private bool IsInputReady()
+    {
+        return Time.unscaledTime >= acceptInputAt;
     }
 
     private RectTransform GetSelectedTargetRect()

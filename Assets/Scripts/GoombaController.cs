@@ -87,11 +87,11 @@ public class GoombaController : MonoBehaviour, IStompHandler
     public bool TryHandleStomp(in EnemyImpactContext context)
     {
         if (defeated) return false;
-        DefeatBySquish();
+        DefeatBySquish(in context);
         return true;
     }
 
-    private void DefeatBySquish()
+    private void DefeatBySquish(in EnemyImpactContext context)
     {
         if (defeated) return;
         SetDefeatedState();
@@ -106,8 +106,9 @@ public class GoombaController : MonoBehaviour, IStompHandler
         BodyCollider.enabled = false;
 
         TriggerSquishAnimation();
-        AwardScore(stompScore);
-        SpawnScorePopup();
+        var awardedScore = ResolveStompScore(in context);
+        AwardScore(awardedScore);
+        SpawnScorePopup(awardedScore);
         squishRoutine = StartCoroutine(DespawnAfter(squishDuration));
     }
 
@@ -137,7 +138,7 @@ public class GoombaController : MonoBehaviour, IStompHandler
         if (defeated) return;
         SetDefeatedState();
         AwardScore(stompScore);
-        SpawnScorePopup();
+        SpawnScorePopup(stompScore);
         Audio?.PlayKnockbackDefeat();
     }
 
@@ -148,14 +149,14 @@ public class GoombaController : MonoBehaviour, IStompHandler
         squishRoutine = null;
     }
 
-    private void SpawnScorePopup()
+    private void SpawnScorePopup(int scoreValue)
     {
-        if (!scorePopupPrefab) return;
+        if (!scorePopupPrefab || scoreValue <= 0) return;
 
         var worldPosition = transform.position + scorePopupOffset;
         var popupObject = PrefabPoolService.Spawn(scorePopupPrefab, worldPosition, Quaternion.identity);
         if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
-            popup.Show(stompScore, worldPosition);
+            popup.Show(scoreValue, worldPosition);
     }
 
     private void AwardScore(int value)
@@ -163,5 +164,11 @@ public class GoombaController : MonoBehaviour, IStompHandler
         if (scoreAwarded) return;
         scoreAwarded = true;
         GameData.GetOrCreate().AddScore(value);
+    }
+
+    private int ResolveStompScore(in EnemyImpactContext context)
+    {
+        if (context.StompScore > 0) return context.StompScore;
+        return stompScore;
     }
 }

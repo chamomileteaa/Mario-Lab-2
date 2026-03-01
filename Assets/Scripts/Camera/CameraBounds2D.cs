@@ -11,8 +11,8 @@ public class CameraBounds2D : MonoBehaviour
     public static event Action<CameraBounds2D> MarioExited;
 
     [field: SerializeField] public int Priority { get; private set; }
+    [field: SerializeField] public CameraEnvironmentType Environment { get; private set; } = CameraEnvironmentType.Overworld;
     [field: SerializeField] public bool ResetProgressOnEnter { get; private set; }
-    [field: SerializeField] public bool OverrideBackgroundColor { get; private set; }
     [field: SerializeField] public Color BackgroundColor { get; private set; } = Color.black;
 
     private BoxCollider2D boxCollider;

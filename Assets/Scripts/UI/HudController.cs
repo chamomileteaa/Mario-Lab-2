@@ -11,6 +11,10 @@ public class HudController : MonoBehaviour
     [SerializeField] private TMP_Text timeText;
     [SerializeField] private TMP_Text worldText;
 
+    [Header("Coin Icon")]
+    [SerializeField] private AnimatorCache coinAnimatorCache;
+    [SerializeField] private string coinEnvironmentParameter = "environment";
+
     [Header("Formatting")]
     [SerializeField, TextArea] private string worldFormat = "WORLD\n{0}";
     [SerializeField, TextArea] private string timeFormat = "TIME\n{0:000}";
@@ -24,6 +28,7 @@ public class HudController : MonoBehaviour
     private CanvasGroup canvasGroup;
     private GameData gameData;
     private MarioController mario;
+    private CameraController cameraController;
     private bool timerExpired;
     private CanvasGroup CanvasGroup => canvasGroup ? canvasGroup : canvasGroup = GetOrAddCanvasGroup();
 
@@ -32,13 +37,16 @@ public class HudController : MonoBehaviour
         _ = CanvasGroup;
         gameData = GameData.GetOrCreate();
         SubscribeData(true);
+        SubscribeCamera(true);
         ValidateReferences();
         RefreshAll();
+        RefreshCoinEnvironmentIcon();
     }
 
     private void OnDisable()
     {
         SubscribeData(false);
+        SubscribeCamera(false);
     }
 
     private void Update()
@@ -137,11 +145,54 @@ public class HudController : MonoBehaviour
         if (!worldText) Debug.LogWarning("HudController missing world text reference.", this);
     }
 
+    private void SubscribeCamera(bool subscribe)
+    {
+        var controller = ResolveCameraController();
+        if (!controller) return;
+
+        if (subscribe)
+        {
+            controller.ActiveEnvironmentChanged += OnActiveEnvironmentChanged;
+            return;
+        }
+
+        controller.ActiveEnvironmentChanged -= OnActiveEnvironmentChanged;
+    }
+
+    private void OnActiveEnvironmentChanged(CameraEnvironmentType _)
+    {
+        RefreshCoinEnvironmentIcon();
+    }
+
+    private void RefreshCoinEnvironmentIcon()
+    {
+        var coinAnimator = ResolveCoinAnimator();
+        if (!coinAnimator) return;
+        if (string.IsNullOrWhiteSpace(coinEnvironmentParameter)) return;
+
+        var controller = ResolveCameraController();
+        var environment = controller ? controller.ActiveEnvironment : CameraEnvironmentType.Overworld;
+        coinAnimator.TrySet(coinEnvironmentParameter, (int)environment);
+    }
+
     private MarioController ResolveMario()
     {
         if (mario) return mario;
         mario = FindFirstObjectByType<MarioController>(FindObjectsInactive.Exclude);
         return mario;
+    }
+
+    private CameraController ResolveCameraController()
+    {
+        if (cameraController) return cameraController;
+        cameraController = FindFirstObjectByType<CameraController>(FindObjectsInactive.Include);
+        return cameraController;
+    }
+
+    private AnimatorCache ResolveCoinAnimator()
+    {
+        if (coinAnimatorCache) return coinAnimatorCache;
+        return coinAnimatorCache = GetComponentInChildren<AnimatorCache>(true);
     }
 
     private string GetWorldValue()

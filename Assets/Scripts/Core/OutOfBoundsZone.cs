@@ -30,6 +30,7 @@ public class OutOfBoundsZone : MonoBehaviour
         if (affectMario && other.CompareColliderTag(PlayerTag) &&
             other.TryGetComponentInParent(out MarioController mario))
         {
+            if (mario.IsPipeInvulnerable) return;
             mario.KillFromOutOfBounds();
             return;
         }
