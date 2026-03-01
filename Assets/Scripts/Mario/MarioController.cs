@@ -120,6 +120,7 @@ public class MarioController : MonoBehaviour
         form = (MarioForm)Mathf.Clamp((int)initialForm, (int)MarioForm.Small, (int)MarioForm.Fire);
         ApplySmallCollider();
 
+        marioSFX = GetComponent<MarioAudio>();
         if (form == MarioForm.Small) return;
         pendingGrow = true;
         pendingGrowForm = form;

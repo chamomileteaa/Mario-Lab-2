@@ -9,7 +9,7 @@ using UnityEngine.Serialization;
 [RequireComponent(typeof(AnimatorCache))]
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
-public class KoopaController : MonoBehaviour, IStompHandler
+public class KoopaController : MonoBehaviour, IStompHandler, IEnemyImpactHandler
 {
     private const string SquashTrigger = "isHit";
 
@@ -115,31 +115,31 @@ public class KoopaController : MonoBehaviour, IStompHandler
     {
         if (defeated) return;
         
-        squished = true;
         inShell = true;
         shellMoving = false;
         
         enemySFX.PlayDeath();
 
         Entity.SetMovementEnabled(false);
-        gameObject.tag = "Untagged";
 
-        Body.linearVelocity = Vector2.zero;
-        Body.gravityScale = 0;
-        Body.simulated = false;
+        Body.simulated = true;
         
-        BodyCollider.enabled = false;
+        //Body.linearVelocity = Vector2.zero;
+        //Entity.SetMovementEnabled(true);
+        Body.linearVelocity = new Vector2(0f, Body.linearVelocity.y);
+        
+        //BodyCollider.enabled = false;
 
         TriggerSquishAnimation();
 
         //gameObject.tag = "Untagged";
-
+/*
         if (squishRoutine != null)
         {
             StopCoroutine(squishRoutine);
         }
         squishRoutine = StartCoroutine(IdleShellState(squishDuration));
-        
+     */   
     }
     
     
@@ -149,7 +149,7 @@ public class KoopaController : MonoBehaviour, IStompHandler
         shellMoving = true;
         inShell = true;
         
-        Entity.SetMovementEnabled(true);
+        StartShellMovement(transform.position - Vector3.right);
 
     }
 
@@ -184,7 +184,7 @@ public class KoopaController : MonoBehaviour, IStompHandler
     
     private void OnEntityKnockedBack(EntityController controller, EnemyImpactType impactType)
     {
-        if (impactType != EnemyImpactType.Star && !defeatWhenKnockedBack) return;
+        if (impactType != EnemyImpactType.Star) return;
         if (defeated) return;
         SetDefeatedState();
         Audio?.PlayDeath();
@@ -221,6 +221,32 @@ public class KoopaController : MonoBehaviour, IStompHandler
             popup.Show(stompScore, worldPosition);
     }
 
+    public bool TryHandleImpact(in EnemyImpactContext context)
+    {
+        if (context.ImpactType == EnemyImpactType.Stomp)
+            return false;
+        if (defeated) 
+            return false;
+        
+        if (!inShell)
+            return false;
+        
+        if (inShell && !shellMoving)
+        {
+            StartShellMovement(context.SourcePosition);
+            return true;
+        }
+        
+        return false;
+    }
 
-    
+    private void StartShellMovement(Vector2 sourcePosition)
+    {
+        shellMoving = true;
+
+        float direction = Mathf.Sign(transform.position.x - sourcePosition.x);
+        Body.linearVelocity = new Vector2(direction * 12f, 0f);
+        
+        Entity.SetMovementEnabled(false);
+    }
 }

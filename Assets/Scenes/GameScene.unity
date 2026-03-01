@@ -16284,7 +16284,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e5047c2937e749648a04b7766ef90864, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioPlayer
-  source: {fileID: 0}
+  source: {fileID: 1221222529}
 --- !u!114 &1221222527
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16297,8 +16297,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1f47ceb196008a249b687eb6713179b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAudio
-  audioPlayer: {fileID: 0}
-  deathCue: {fileID: 0}
+  audioPlayer: {fileID: 1221222526}
+  deathCue: {fileID: 11400000, guid: b584b54467baf8e4d9130cc9d6e93a0b, type: 2}
 --- !u!114 &1221222528
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16311,7 +16311,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33f08069a44349442a76d8001f9c4275, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KoopaController
-  squishDuration: 0.05
+  squishDuration: 4
   stompScore: 100
   scorePopupPrefab: {fileID: 6309700172672840609, guid: d6ea739a175e8df4d8832834f03bdd80, type: 3}
   scorePopupOffset: {x: 0, y: 0.35, z: 0}
@@ -16607,10 +16607,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db2d889fc6050f149a0abde19f863c83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MusicPlayer
-  musicCue: {fileID: 11400000, guid: c428861ae8311794fac9b51c6583d551, type: 2}
-  invincibilityCue: {fileID: 11400000, guid: f5789828ac001ec428b426fe5d383559, type: 2}
-  deathCue: {fileID: 11400000, guid: acc59d979dfe7da4eadfde3588556ab2, type: 2}
-  audioPlayer: {fileID: 1713993399}
+  musicCue: {fileID: 0}
+  invincibilityCue: {fileID: 0}
+  deathCue: {fileID: 0}
+  audioPlayer: {fileID: 0}
 --- !u!114 &1713993399
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16899,7 +16899,7 @@ PrefabInstance:
     - target: {fileID: -1282778830633748523, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       propertyPath: marioSFX
       value: 
-      objectReference: {fileID: 2121907909}
+      objectReference: {fileID: 2121907919}
     - target: {fileID: -1282778830633748523, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       propertyPath: LevelMusic
       value: 
@@ -16968,7 +16968,7 @@ PrefabInstance:
       addedObject: {fileID: 2121907910}
     - targetCorrespondingSourceObject: {fileID: 6070930631125170473, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 2121907909}
+      addedObject: {fileID: 2121907919}
   m_SourcePrefab: {fileID: 100100000, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
 --- !u!4 &2121907899 stripped
 Transform:
@@ -17072,7 +17072,20 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &2121907909
+--- !u!114 &2121907910
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 269702645}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5047c2937e749648a04b7766ef90864, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioPlayer
+  source: {fileID: 2121907908}
+--- !u!114 &2121907919
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -17089,19 +17102,6 @@ MonoBehaviour:
   growCue: {fileID: 11400000, guid: 5c167a3d3dece9d47bfccecf3c7fdd55, type: 2}
   shrinkPipeCue: {fileID: 11400000, guid: 12303f6f31adc3846ae847a9a7cf433d, type: 2}
   LifeUpCue: {fileID: 11400000, guid: 9433072fc894a32468b3abfe04be8f51, type: 2}
---- !u!114 &2121907910
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 269702645}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e5047c2937e749648a04b7766ef90864, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudioPlayer
-  source: {fileID: 2121907908}
 --- !u!1001 &2795137113583327952
 PrefabInstance:
   m_ObjectHideFlags: 0
