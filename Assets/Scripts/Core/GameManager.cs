@@ -21,11 +21,16 @@ public class GameManager : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioClip pauseToggleSfx;
 
+    [Header("Scene Reload")]
+    [SerializeField] private string gameSceneName = "GameScene";
+    [SerializeField, Min(0f)] private float mainMenuStartInputDelay = 0.35f;
+
     private const PauseType GameplayPauseTypes = PauseType.Physics | PauseType.Animation | PauseType.Input;
     private static bool forceMainMenuOnNextLoad;
 
     private GameData gameData;
     private bool userPaused;
+    private float mainMenuInputUnlockTime;
     private AudioPlayer audioPlayer;
     private MusicPlayer musicPlayer;
 
@@ -97,6 +102,7 @@ public class GameManager : MonoBehaviour
         if (gameOverOverlay) gameOverOverlay.HideInstant();
         if (pauseOverlay) pauseOverlay.HideInstant();
         if (mainMenu) mainMenu.Show(HandleStartPressed);
+        mainMenuInputUnlockTime = Time.unscaledTime + Mathf.Max(0f, mainMenuStartInputDelay);
     }
 
     public void StartNewRun()
@@ -129,12 +135,19 @@ public class GameManager : MonoBehaviour
         ClearUserPause();
         PauseService.ClearAll();
 
+        if (!string.IsNullOrWhiteSpace(gameSceneName))
+        {
+            SceneManager.LoadScene(gameSceneName, LoadSceneMode.Single);
+            return;
+        }
+
         var scene = SceneManager.GetActiveScene();
-        SceneManager.LoadScene(scene.name);
+        SceneManager.LoadScene(scene.name, LoadSceneMode.Single);
     }
 
     private void HandleStartPressed()
     {
+        if (Time.unscaledTime < mainMenuInputUnlockTime) return;
         StartNewRun();
     }
 

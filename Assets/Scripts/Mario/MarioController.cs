@@ -93,7 +93,8 @@ public class MarioController : MonoBehaviour
     [SerializeField] private bool hideMarioOnCastleEntry = true;
     [SerializeField] private bool disableMarioAtCastleEntry = true;
     [SerializeField, Min(0)] private int timerScorePerTick = 50;
-    [SerializeField, Min(0.001f)] private float timerTickInterval = 0.01f;
+    [SerializeField, Min(1)] private int timerSecondsPerTick = 8;
+    [SerializeField, Min(0.0001f)] private float timerTickInterval = 0.001f;
 
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
@@ -1047,16 +1048,18 @@ public class MarioController : MonoBehaviour
         if (!data) yield break;
 
         var tickInterval = Mathf.Max(0.001f, timerTickInterval);
+        var secondsPerTick = Mathf.Max(1, timerSecondsPerTick);
         var pointsPerTick = Mathf.Max(0, timerScorePerTick);
         var remaining = Mathf.Max(0, Mathf.CeilToInt(data.timer));
         if (remaining <= 0) yield break;
 
         while (remaining > 0)
         {
-            remaining--;
+            var consumed = Mathf.Min(secondsPerTick, remaining);
+            remaining -= consumed;
             data.SetTimer(remaining);
             if (pointsPerTick > 0)
-                data.AddScore(pointsPerTick);
+                data.AddScore(pointsPerTick * consumed);
 
             yield return new WaitForSecondsRealtime(tickInterval);
         }

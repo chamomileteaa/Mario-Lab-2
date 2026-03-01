@@ -61,6 +61,8 @@ public class MusicPlayer : MonoBehaviour
         var data = Data;
         if (data && data.runActive)
             OnGameplayRunStarted();
+        else
+            PlayNameEntryTheme();
     }
 
     private void Update()
@@ -69,6 +71,9 @@ public class MusicPlayer : MonoBehaviour
         PollEnvironmentChanges();
 
         var data = Data;
+        if (data && !data.runActive && currentTheme != MusicTheme.NameEntry)
+            PlayNameEntryTheme();
+
         if (data && data.runActive && currentTheme == MusicTheme.NameEntry)
             OnGameplayRunStarted();
 
@@ -187,6 +192,8 @@ public class MusicPlayer : MonoBehaviour
         var data = Data;
         if (data && data.runActive)
             OnGameplayRunStarted();
+        else
+            PlayNameEntryTheme();
     }
 
     private void TrySubscribeCamera()
@@ -196,7 +203,8 @@ public class MusicPlayer : MonoBehaviour
         if (!controller) return;
         controller.ActiveEnvironmentChanged += OnActiveEnvironmentChanged;
         cameraSubscribed = true;
-        ApplyEnvironmentTheme(controller.ActiveEnvironment, false);
+        if (Data && Data.runActive)
+            ApplyEnvironmentTheme(controller.ActiveEnvironment, false);
     }
 
     private void UnsubscribeCamera()
@@ -215,6 +223,9 @@ public class MusicPlayer : MonoBehaviour
 
     private void PollEnvironmentChanges()
     {
+        var data = Data;
+        if (data && !data.runActive) return;
+
         var controller = CameraController;
         if (!controller) return;
 
@@ -318,6 +329,7 @@ public class MusicPlayer : MonoBehaviour
         if (hurryTriggered) return;
         var data = Data;
         if (!data) return;
+        if (Mario && Mario.IsWinning) return;
         if (data.timer > hurryTimeThreshold) return;
         if (data.timer <= 0f) return;
         if (!IsHurryCapable(activeLevelTheme)) return;
@@ -380,6 +392,9 @@ public class MusicPlayer : MonoBehaviour
 
     private void ApplyEnvironmentTheme(CameraEnvironmentType environment, bool restartIfPlaying)
     {
+        var data = Data;
+        if (data && !data.runActive) return;
+
         lastEnvironment = environment;
         hasLastEnvironment = true;
 
