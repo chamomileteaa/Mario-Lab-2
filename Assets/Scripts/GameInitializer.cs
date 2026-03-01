@@ -22,12 +22,11 @@ public static class GameInitializer
     private static int poolPrewarmCount = DefaultPoolPrewarmCount;
     private static int poolCreatesPerFrame = DefaultPoolCreatesPerFrame;
     private static CoroutineHost host;
+    private static Coroutine scenePrewarmRoutine;
+    private static PoolPrewarmConfig prewarmConfig;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void InitializeOnLoad()
-    {
-        Initialize();
-    }
+    private static void InitializeOnLoad() => Initialize();
 
     private static void Initialize()
     {
@@ -36,7 +35,7 @@ public static class GameInitializer
 
         ApplyPoolDefaults();
         SceneManager.sceneLoaded += OnSceneLoaded;
-        PrewarmScenePools();
+        ScheduleScenePoolPrewarm();
     }
 
     public static void ConfigurePrewarm(bool enableAsync, int targetPoolPrewarmCount = DefaultPoolPrewarmCount, int targetPoolCreatesPerFrame = DefaultPoolCreatesPerFrame)
@@ -61,22 +60,43 @@ public static class GameInitializer
 
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        PrewarmScenePools();
+        ScheduleScenePoolPrewarm();
     }
 
-    private static void PrewarmScenePools()
+    private static void ScheduleScenePoolPrewarm()
     {
-        var goombas = Object.FindObjectsByType<GoombaController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (var i = 0; i < goombas.Length; i++)
-            PrewarmPool(goombas[i].ScorePopupPrefab);
-        
-        var koopas = Object.FindObjectsByType<KoopaController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (var i = 0; i < koopas.Length; i++)
-            PrewarmPool(koopas[i].ScorePopupPrefab);
+        if (scenePrewarmRoutine != null)
+            Host.StopCoroutine(scenePrewarmRoutine);
 
-        var brickCoins = Object.FindObjectsByType<BrickCoin>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (var i = 0; i < brickCoins.Length; i++)
-            PrewarmPool(brickCoins[i].ScorePopupPrefab);
+        scenePrewarmRoutine = Host.Run(PrewarmScenePoolsNextFrame());
+    }
+
+    private static IEnumerator PrewarmScenePoolsNextFrame()
+    {
+        // Defer prewarm work so first rendered frame is not blocked.
+        yield return null;
+
+        var config = ResolvePrewarmConfig();
+        if (!config)
+        {
+            scenePrewarmRoutine = null;
+            yield break;
+        }
+
+        PrewarmPool(config.ScorePopupPrefab);
+
+        // Split work across frames to reduce startup spikes.
+        yield return null;
+
+        PrewarmPool(config.FireballPrefab);
+
+        scenePrewarmRoutine = null;
+    }
+
+    private static PoolPrewarmConfig ResolvePrewarmConfig()
+    {
+        prewarmConfig ??= Object.FindFirstObjectByType<PoolPrewarmConfig>(FindObjectsInactive.Include);
+        return prewarmConfig;
     }
 
     private static void StartPrewarm(GameObject prefab)
@@ -115,6 +135,8 @@ public static class GameInitializer
     {
         if (host) Object.Destroy(host.gameObject);
         host = null;
+        scenePrewarmRoutine = null;
+        prewarmConfig = null;
 
         if (initialized) SceneManager.sceneLoaded -= OnSceneLoaded;
         initialized = false;

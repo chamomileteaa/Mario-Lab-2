@@ -36,4 +36,13 @@ public static class ColliderExtensions
         component = collider.attachedRigidbody.GetComponentInChildren<T>();
         return component;
     }
+
+    public static bool IsInLayer(this Collider2D collider, int layer)
+    {
+        if (!collider || layer < 0) return false;
+        if (collider.gameObject.layer == layer) return true;
+        if (collider.attachedRigidbody && collider.attachedRigidbody.gameObject.layer == layer) return true;
+        var root = collider.transform ? collider.transform.root : null;
+        return root && root.gameObject.layer == layer;
+    }
 }
