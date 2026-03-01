@@ -71,6 +71,8 @@ public class MarioController : MonoBehaviour
     [SerializeField, Min(0f)] private float deathOffscreenBuffer = 1f;
     [SerializeField, Min(0.1f)] private float deathFallbackFallDistance = 8f;
 
+    [SerializeField] private MarioAudio marioSFX;
+
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
     private MarioVisuals marioVisuals;

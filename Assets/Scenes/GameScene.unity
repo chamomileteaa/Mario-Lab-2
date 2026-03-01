@@ -445,6 +445,11 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 8976419940446995659, guid: b2d1dde066e85774abec6d5daa268332, type: 3}
   m_PrefabInstance: {fileID: 5325250320079384821}
   m_PrefabAsset: {fileID: 0}
+--- !u!212 &424722983 stripped
+SpriteRenderer:
+  m_CorrespondingSourceObject: {fileID: 7381820502550802680, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+  m_PrefabInstance: {fileID: 1028087785}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &465587288
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -500,8 +505,89 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3974260873347956098, guid: 3d1e140c7301442e7a8fdf54abe5e7ce, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
   m_SourcePrefab: {fileID: 100100000, guid: 3d1e140c7301442e7a8fdf54abe5e7ce, type: 3}
+--- !u!1 &578876646 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4133034876165275223, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+  m_PrefabInstance: {fileID: 1028087785}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &578876649 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 3643931151868295503, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+  m_PrefabInstance: {fileID: 1028087785}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &578876655
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 578876646}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33f08069a44349442a76d8001f9c4275, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KoopaController
+  squishDuration: 1
+  stompScore: 100
+  scorePopupPrefab: {fileID: 0}
+  scorePopupOffset: {x: 0, y: 0.35, z: 0}
+  defeatWhenKnockedBack: 1
+  despawnBelowSpawnDistance: 12
+  enemySFX: {fileID: 0}
+--- !u!114 &578876656
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 578876646}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c1fa0f3c26c4df59a1223e4f3b8a811, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EntityController
+  moveSpeed: 1.5
+  acceleration: 40
+  moveDirectionX: -1
+  moveOnEnable: 1
+  startWhenVisible: 1
+  spawnFacingMode: 0
+  turnRules: 7
+  turnCooldown: 0.1
+  useContinuousCollisionDetection: 1
+  blockBumpReaction: 1
+  bumpUpwardSpeed: 3.25
+  knockAwayHorizontalSpeed: 2
+  knockAwayGravityScale: 1
+  allowKnockbackHit: 1
+  allowStarHit: 1
+  stopAnimatorWhenKnockedBack: 1
+--- !u!114 &578876657
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 578876646}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6321b826b85549349972b39e53ede82f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFlipper
+  targets:
+  - {fileID: 424722983}
+  referenceCollider: {fileID: 578876649}
+  useLocalScale: 1
+  flipX: 1
+  flipY: 1
+  deadzone: 0.01
+  hasReferenceCollider: 1
+  fallbackFlipOffset: {x: 0, y: 0}
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -994,6 +1080,72 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1028087785
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 731320736982194861, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -2.0524707
+      objectReference: {fileID: 0}
+    - target: {fileID: 731320736982194861, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -2.375637
+      objectReference: {fileID: 0}
+    - target: {fileID: 731320736982194861, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 731320736982194861, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 731320736982194861, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 731320736982194861, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 731320736982194861, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 731320736982194861, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 731320736982194861, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 731320736982194861, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4133034876165275223, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      propertyPath: m_Name
+      value: KoopaTroopa
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4133034876165275223, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 578876657}
+    - targetCorrespondingSourceObject: {fileID: 4133034876165275223, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 578876656}
+    - targetCorrespondingSourceObject: {fileID: 4133034876165275223, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 578876655}
+  m_SourcePrefab: {fileID: 100100000, guid: 0533b61421f55854e8a0472e5fe462a2, type: 3}
 --- !u!1 &1054585867
 GameObject:
   m_ObjectHideFlags: 0
@@ -1316,7 +1468,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3173372560840613044, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
   m_SourcePrefab: {fileID: 100100000, guid: 7ef4cf8d53ea55e49aa2a929dce8662d, type: 3}
 --- !u!1 &1692339881
 GameObject:
@@ -1805,6 +1960,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -1282778830633748523, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
+      propertyPath: marioSFX
+      value: 
+      objectReference: {fileID: 2121907900}
     - target: {fileID: 52422375666345885, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -1863,6 +2022,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 52422375666345885, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
   m_PrefabInstance: {fileID: 2121907898}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &2121907900 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2468013579246801357, guid: 54a0dfe9dc26b4b44a9be262fdbcb120, type: 3}
+  m_PrefabInstance: {fileID: 2121907898}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6cc22e39a8a339a4e894eceb824b7ae6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MarioAudio
 --- !u!1001 &2795137113583327952
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2361,3 +2531,4 @@ SceneRoots:
   - {fileID: 7971272560682751676}
   - {fileID: 1134687226}
   - {fileID: 8488918969393834290}
+  - {fileID: 1028087785}

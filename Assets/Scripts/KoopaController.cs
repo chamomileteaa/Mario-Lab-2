@@ -25,14 +25,14 @@ public class KoopaController : MonoBehaviour, IStompHandler, IEnemyImpactHandler
     [SerializeField] private bool defeatWhenKnockedBack = true;
     [SerializeField, Min(0.5f)] private float despawnBelowSpawnDistance = 12f;
 
-    [SerializeField] private EnemyAudio enemySFX;
+    [SerializeField] private KoopaTroopaAudio enemySFX;
 
     private EntityController entityController;
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
     private Animator animatorComponent;
     private AnimatorCache animatorCache;
-    private EnemyAudio enemyAudio;
+    private KoopaTroopaAudio enemyAudio;
     private Coroutine squishRoutine;
     private float initialGravityScale = 1f;
     private string initialTag;
@@ -47,7 +47,7 @@ public class KoopaController : MonoBehaviour, IStompHandler, IEnemyImpactHandler
     private BoxCollider2D BodyCollider => bodyCollider2D ? bodyCollider2D : bodyCollider2D = GetComponent<BoxCollider2D>();
     private Animator Animator => animatorComponent ? animatorComponent : animatorComponent = GetComponent<Animator>();
     private AnimatorCache Anim => animatorCache ? animatorCache : animatorCache = GetComponent<AnimatorCache>();
-    private EnemyAudio Audio => enemyAudio ? enemyAudio : enemyAudio = GetComponent<EnemyAudio>();
+    private KoopaTroopaAudio Audio => enemyAudio ? enemyAudio : enemyAudio = GetComponent<KoopaTroopaAudio>();
     public GameObject ScorePopupPrefab => scorePopupPrefab;
 
     private void Awake()
@@ -56,7 +56,7 @@ public class KoopaController : MonoBehaviour, IStompHandler, IEnemyImpactHandler
         initialGravityScale = Body.gravityScale;
         initialTag = gameObject.tag;
         
-        enemySFX = GetComponent<EnemyAudio>();
+        enemySFX = GetComponent<KoopaTroopaAudio>();
     }
     
     private void OnEnable()
@@ -118,7 +118,7 @@ public class KoopaController : MonoBehaviour, IStompHandler, IEnemyImpactHandler
         inShell = true;
         shellMoving = false;
         
-        enemySFX.PlayDeath();
+        enemySFX.PlayDefeat();
 
         Entity.SetMovementEnabled(false);
 
@@ -187,7 +187,7 @@ public class KoopaController : MonoBehaviour, IStompHandler, IEnemyImpactHandler
         if (impactType != EnemyImpactType.Star) return;
         if (defeated) return;
         SetDefeatedState();
-        Audio?.PlayDeath();
+        Audio?.PlayDefeat();
     }
     
 
