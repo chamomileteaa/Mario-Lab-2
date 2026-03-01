@@ -35,6 +35,7 @@ public class GoombaController : MonoBehaviour, IStompHandler
     private float spawnY;
     private bool defeated;
     private bool squished;
+    private bool scoreAwarded;
 
     private EntityController Entity => entityController ? entityController : entityController = GetComponent<EntityController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
@@ -56,6 +57,7 @@ public class GoombaController : MonoBehaviour, IStompHandler
         spawnY = transform.position.y;
         defeated = false;
         squished = false;
+        scoreAwarded = false;
         gameObject.tag = initialTag;
         Body.simulated = true;
         Body.gravityScale = initialGravityScale;
@@ -104,6 +106,7 @@ public class GoombaController : MonoBehaviour, IStompHandler
         BodyCollider.enabled = false;
 
         TriggerSquishAnimation();
+        AwardScore(stompScore);
         SpawnScorePopup();
         squishRoutine = StartCoroutine(DespawnAfter(squishDuration));
     }
@@ -133,6 +136,8 @@ public class GoombaController : MonoBehaviour, IStompHandler
         if (impactType != EnemyImpactType.Star && !defeatWhenKnockedBack) return;
         if (defeated) return;
         SetDefeatedState();
+        AwardScore(stompScore);
+        SpawnScorePopup();
         Audio?.PlayKnockbackDefeat();
     }
 
@@ -151,5 +156,12 @@ public class GoombaController : MonoBehaviour, IStompHandler
         var popupObject = PrefabPoolService.Spawn(scorePopupPrefab, worldPosition, Quaternion.identity);
         if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
             popup.Show(stompScore, worldPosition);
+    }
+
+    private void AwardScore(int value)
+    {
+        if (scoreAwarded) return;
+        scoreAwarded = true;
+        GameData.GetOrCreate().AddScore(value);
     }
 }

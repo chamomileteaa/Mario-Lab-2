@@ -51,6 +51,7 @@ public class MarioVisuals : MonoBehaviour
     private Material[] originalSpriteMaterials;
     private bool starPaletteApplied;
     private int lastAppliedStarPaletteIndex = -1;
+    private float forcedStarVisualTimer;
 
     private MarioController Mario => marioController ? marioController : marioController = GetComponent<MarioController>();
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
@@ -64,6 +65,8 @@ public class MarioVisuals : MonoBehaviour
     public void RefreshVisualState()
     {
         if (!Mario || Mario.IsDead) return;
+        if (forcedStarVisualTimer > 0f)
+            forcedStarVisualTimer = Mathf.Max(0f, forcedStarVisualTimer - Time.deltaTime);
         UpdateSpriteDirection();
         SyncAnimator();
         UpdateSpriteVisuals();
@@ -86,14 +89,22 @@ public class MarioVisuals : MonoBehaviour
         return clip ? clip.length : 0f;
     }
 
+    public void ForceStarVisualForDuration(float duration)
+    {
+        if (duration <= 0f) return;
+        forcedStarVisualTimer = Mathf.Max(forcedStarVisualTimer, duration);
+    }
+
     public void ResetVisuals()
     {
+        forcedStarVisualTimer = 0f;
         DisableStarPaletteShader();
         ApplySpriteVisuals(1f);
     }
 
     private void OnDisable()
     {
+        forcedStarVisualTimer = 0f;
         DisableStarPaletteShader();
     }
 
@@ -140,7 +151,8 @@ public class MarioVisuals : MonoBehaviour
             alpha = Mathf.Lerp(invulnerabilityMinAlpha, 1f, pulse);
         }
 
-        var usedStarShader = Mario.IsStarPowered && TryApplyStarPaletteShader();
+        var useStarVisual = Mario.IsStarPowered || forcedStarVisualTimer > 0f;
+        var usedStarShader = useStarVisual && TryApplyStarPaletteShader();
         if (!usedStarShader) 
             DisableStarPaletteShader();
 

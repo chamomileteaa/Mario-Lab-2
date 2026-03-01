@@ -32,7 +32,7 @@ public class MusicPlayer : MonoBehaviour
     [SerializeField] private AudioSource sourceB;
 
     private MarioController mario;
-    private UIScript uiScript;
+    private GameData gameData;
     private AudioSource[] sources;
     private AudioClip currentClip;
     private MusicTheme currentTheme;
@@ -41,7 +41,7 @@ public class MusicPlayer : MonoBehaviour
     private bool hurryTriggered;
 
     private MarioController Mario => mario ? mario : mario = FindFirstObjectByType<MarioController>(FindObjectsInactive.Include);
-    private UIScript UI => uiScript ? uiScript : uiScript = FindFirstObjectByType<UIScript>(FindObjectsInactive.Include);
+    private GameData Data => gameData ? gameData : gameData = GameData.GetOrCreate();
     private AudioSource[] Sources => sources ??= ResolveSources();
 
     private void OnEnable()
@@ -241,10 +241,10 @@ public class MusicPlayer : MonoBehaviour
     private void TryTriggerHurryState()
     {
         if (hurryTriggered) return;
-        var ui = UI;
-        if (!ui) return;
-        if (ui.timeLeft > hurryTimeThreshold) return;
-        if (ui.timeLeft <= 0f) return;
+        var data = Data;
+        if (!data) return;
+        if (data.timer > hurryTimeThreshold) return;
+        if (data.timer <= 0f) return;
         if (!IsHurryCapable(activeLevelTheme)) return;
 
         hurryTriggered = true;

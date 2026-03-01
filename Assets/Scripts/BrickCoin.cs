@@ -54,6 +54,10 @@ public class BrickCoin : MonoBehaviour
 
     private void SpawnScorePopup()
     {
+        var data = GameData.GetOrCreate();
+        data.AddCoin();
+        data.AddScore(scoreValue);
+
         if (!scorePopupPrefab) return;
 
         var worldPosition = transform.position + scorePopupOffset;

@@ -172,7 +172,7 @@ MonoBehaviour:
   turnCooldown: 0.1
   useContinuousCollisionDetection: 1
   blockBumpReaction: 2
-  bumpUpwardSpeed: 3.25
+  bumpUpwardSpeed: 9
   knockAwayHorizontalSpeed: 2
   knockAwayGravityScale: 1
   allowKnockbackHit: 1
@@ -319,10 +319,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GoombaAudio
   cues:
-    keys:
-    - 0
-    - 1
-    - 2
+    keys: 000000000100000002000000
     values:
     - {fileID: 8300000, guid: 32301e88d52f6354ca5e3943668db218, type: 3}
     - {fileID: 8300000, guid: a33dc37755d04994898cd2ad8cfd40cf, type: 3}

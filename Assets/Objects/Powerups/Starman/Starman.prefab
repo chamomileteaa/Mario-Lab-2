@@ -147,12 +147,12 @@ MonoBehaviour:
   moveDirectionX: -1
   moveOnEnable: 1
   startWhenVisible: 1
-  spawnFacingMode: 0
+  spawnFacingMode: 1
   turnRules: 3
   turnCooldown: 0.1
   useContinuousCollisionDetection: 1
   blockBumpReaction: 1
-  bumpUpwardSpeed: 3.25
+  bumpUpwardSpeed: 9
   knockAwayHorizontalSpeed: 2
   knockAwayGravityScale: 1
   allowKnockbackHit: 1
@@ -231,7 +231,7 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0

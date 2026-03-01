@@ -24,8 +24,8 @@ public class MarioController : MonoBehaviour
     private const string FireThrowTrigger = "throw";
     private const string FireActionName = "Attack";
     private const PauseType MarioPauseBypassTypes = PauseType.Physics | PauseType.Animation;
-    private const PauseType MarioFormPauseBypassTypes = PauseType.Animation;
     private const PauseType GameplayPauseTypes = PauseType.Physics | PauseType.Animation | PauseType.Input;
+    private const PauseType FormTransitionPauseTypes = PauseType.Physics | PauseType.Input;
 
     [Header("Input")]
     [SerializeField] private InputActionReference moveAction;
@@ -78,6 +78,7 @@ public class MarioController : MonoBehaviour
     [SerializeField, Min(0.1f)] private float deathBounceSpeed = 8f;
     [SerializeField, Min(0f)] private float deathOffscreenBuffer = 1f;
     [SerializeField, Min(0.1f)] private float deathFallbackFallDistance = 8f;
+    [SerializeField, Min(0f)] private float deathSceneReloadDelay = 2.8f;
 
     private Rigidbody2D body2D;
     private BoxCollider2D bodyCollider2D;
@@ -85,6 +86,7 @@ public class MarioController : MonoBehaviour
     private AnimatorCache animatorCache;
     private Camera sceneCamera;
     private InputAction fireAction;
+    private GameOverOverlayController gameOverOverlay;
 
     private Vector2 moveInput;
     private bool jumpHeld;
@@ -170,7 +172,6 @@ public class MarioController : MonoBehaviour
         Body.simulated = true;
         BodyCollider.enabled = true;
         PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, false);
-        PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, false);
         moveAction.SetEnabled(true);
         jumpAction.SetEnabled(true);
         ResolveFireAction()?.Enable();
@@ -182,7 +183,6 @@ public class MarioController : MonoBehaviour
         StopDeathSequence();
         Visuals?.ResetVisuals();
         PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, false);
-        PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, false);
         fireAction?.Disable();
         jumpAction.SetEnabled(false);
         moveAction.SetEnabled(false);
@@ -253,7 +253,7 @@ public class MarioController : MonoBehaviour
         form = targetForm;
         Visuals?.PlayFormTransition(grew);
         FormChanged?.Invoke(previousForm, form);
-        StartFormTransitionPause(grew);
+        StartFormTransitionPause(grew, previousForm, form);
     }
 
     public void ActivateFormProtection(float duration = -1f)
@@ -550,7 +550,7 @@ public class MarioController : MonoBehaviour
         form = pendingGrowForm;
         Visuals?.PlayFormTransition(true);
         FormChanged?.Invoke(MarioForm.Small, form);
-        StartFormTransitionPause(true);
+        StartFormTransitionPause(true, MarioForm.Small, form);
     }
 
     private bool TryApplyBigCollider()
@@ -629,24 +629,42 @@ public class MarioController : MonoBehaviour
         }
 
         PauseService.SetPauseBypass(gameObject, MarioPauseBypassTypes, false);
+
+        deathRoutine = null;
+
+        var timeUp = gameData && gameData.timer <= 0f;
+        var outOfLives = gameData && gameData.lives <= 0;
+        if (timeUp || outOfLives)
+        {
+            var overlay = ResolveGameOverOverlay();
+            if (overlay)
+            {
+                var finished = false;
+                if (timeUp) overlay.ShowTimeUp(() => finished = true);
+                else overlay.ShowGameOver(() => finished = true);
+
+                while (!finished)
+                    yield return null;
+            }
+        }
+
+        if (outOfLives && gameData)
+            gameData.ResetAll();
+
+        if (deathSceneReloadDelay > 0f)
+            yield return new WaitForSecondsRealtime(deathSceneReloadDelay);
+
         if (deathPauseActive)
         {
             PauseService.Resume(GameplayPauseTypes);
             deathPauseActive = false;
         }
 
-        deathRoutine = null;
-        if (gameData && gameData.lives <= 0)
-        {
-            SceneManager.LoadScene("GameOver");
-            yield break;
-        }
-
         var scene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(scene.name);
     }
 
-    private void StartFormTransitionPause(bool grew)
+    private void StartFormTransitionPause(bool grew, MarioForm fromForm, MarioForm toForm)
     {
         var duration = Visuals ? Visuals.GetFormTransitionDuration(grew) : 0f;
         if (duration <= 0f) duration = formTransitionPauseFallback;
@@ -655,6 +673,9 @@ public class MarioController : MonoBehaviour
             StopFormTransitionSequence();
             return;
         }
+
+        if (IsBigFireTransition(fromForm, toForm))
+            Visuals?.ForceStarVisualForDuration(duration);
 
         if (formTransitionRoutine != null)
             StopCoroutine(formTransitionRoutine);
@@ -668,6 +689,12 @@ public class MarioController : MonoBehaviour
         formTransitionRoutine = StartCoroutine(FormTransitionPauseSequence(duration));
     }
 
+    private static bool IsBigFireTransition(MarioForm fromForm, MarioForm toForm)
+    {
+        return (fromForm == MarioForm.Big && toForm == MarioForm.Fire) ||
+               (fromForm == MarioForm.Fire && toForm == MarioForm.Big);
+    }
+
     private void StopFormTransitionSequence()
     {
         if (formTransitionRoutine != null)
@@ -676,25 +703,22 @@ public class MarioController : MonoBehaviour
             formTransitionRoutine = null;
         }
 
-        PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, false);
         if (!formPauseActive) return;
 
-        PauseService.Resume(GameplayPauseTypes);
+        PauseService.Resume(FormTransitionPauseTypes);
         formPauseActive = false;
     }
 
     private IEnumerator FormTransitionPauseSequence(float duration)
     {
-        PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, true);
-        PauseService.Pause(GameplayPauseTypes);
+        PauseService.Pause(FormTransitionPauseTypes);
         formPauseActive = true;
 
         yield return new WaitForSecondsRealtime(duration);
 
-        PauseService.SetPauseBypass(gameObject, MarioFormPauseBypassTypes, false);
         if (formPauseActive)
         {
-            PauseService.Resume(GameplayPauseTypes);
+            PauseService.Resume(FormTransitionPauseTypes);
             formPauseActive = false;
         }
 
@@ -715,6 +739,13 @@ public class MarioController : MonoBehaviour
         var found = FindFirstObjectByType<GameData>(FindObjectsInactive.Include);
         if (found && !GameData.Instance) GameData.Instance = found;
         return found;
+    }
+
+    private GameOverOverlayController ResolveGameOverOverlay()
+    {
+        if (gameOverOverlay) return gameOverOverlay;
+        gameOverOverlay = FindFirstObjectByType<GameOverOverlayController>(FindObjectsInactive.Include);
+        return gameOverOverlay;
     }
 
     public void StartVictoryScreen(Transform poleTransform)
@@ -762,7 +793,11 @@ public class MarioController : MonoBehaviour
             yield return null;
         }
 
-        SceneManager.LoadScene("MainMenuScene");
+        var gameData = ResolveGameData();
+        if (gameData) gameData.ResetAll();
+
+        var scene = SceneManager.GetActiveScene();
+        SceneManager.LoadScene(scene.name);
 
     }
 }
