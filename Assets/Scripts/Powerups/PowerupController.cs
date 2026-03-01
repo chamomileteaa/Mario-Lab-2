@@ -1,9 +1,20 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
+[RequireComponent(typeof(AudioPlayer))]
 public class PowerupController : MonoBehaviour
 {
+    [Header("Audio")]
+    [FormerlySerializedAs("spawnClip")]
+    [SerializeField] private AudioClip spawnSfx;
+
+    [Header("Collect Popup")]
+    [SerializeField] private GameObject scorePopupPrefab;
+    [SerializeField] private Vector3 scorePopupOffset = new Vector3(0f, 0.35f, 0f);
+
+    [Header("Rise")]
     [SerializeField, Min(0f)] private float riseDistance = 1f;
     [SerializeField, Min(0.01f)] private float riseDuration = 0.35f;
     [SerializeField] private int sortingOrderBehindBlock = 1;
@@ -11,7 +22,7 @@ public class PowerupController : MonoBehaviour
 
     private Rigidbody2D body2D;
     private EntityController entityController;
-    private PowerupAudio powerupAudio;
+    private AudioPlayer audioPlayer;
     private SpriteRenderer[] spriteRenderers;
     private Collider2D[] ownColliders;
     private SortingState[] sortingStates;
@@ -23,7 +34,7 @@ public class PowerupController : MonoBehaviour
 
     private Rigidbody2D Body => body2D ? body2D : body2D = GetComponent<Rigidbody2D>();
     private EntityController Entity => entityController ? entityController : entityController = GetComponent<EntityController>();
-    private PowerupAudio Audio => powerupAudio ? powerupAudio : powerupAudio = GetComponent<PowerupAudio>();
+    private AudioPlayer Audio => audioPlayer ? audioPlayer : audioPlayer = GetComponent<AudioPlayer>();
     private SpriteRenderer[] Sprites => spriteRenderers != null && spriteRenderers.Length > 0
         ? spriteRenderers
         : spriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
@@ -50,8 +61,26 @@ public class PowerupController : MonoBehaviour
         if (riseRoutine != null)
             StopCoroutine(riseRoutine);
 
-        Audio?.PlaySpawn();
+        if (spawnSfx) Audio?.PlayOneShot(spawnSfx);
         riseRoutine = StartCoroutine(RiseRoutine(blockRenderer));
+    }
+
+    public void ShowCollectScorePopup(int value)
+    {
+        if (value <= 0 || !scorePopupPrefab) return;
+        var worldPosition = transform.position + scorePopupOffset;
+        var popupObject = PrefabPoolService.Spawn(scorePopupPrefab, worldPosition, Quaternion.identity);
+        if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
+            popup.Show(value, worldPosition);
+    }
+
+    public void ShowCollectLabelPopup(string label)
+    {
+        if (string.IsNullOrWhiteSpace(label) || !scorePopupPrefab) return;
+        var worldPosition = transform.position + scorePopupOffset;
+        var popupObject = PrefabPoolService.Spawn(scorePopupPrefab, worldPosition, Quaternion.identity);
+        if (popupObject && popupObject.TryGetComponent<ScorePopup>(out var popup))
+            popup.ShowLabel(label, worldPosition);
     }
 
     private IEnumerator RiseRoutine(SpriteRenderer blockRenderer)

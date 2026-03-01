@@ -20,6 +20,9 @@ public class CameraController : MonoBehaviour
     [Header("Rules")]
     [SerializeField] private bool preventBacktrackingX = true;
 
+    [Header("Main Menu")]
+    [SerializeField] private Vector2 mainMenuOffset = new Vector2(0f, 6f);
+
     private readonly List<CameraBounds2D> enteredBounds = new List<CameraBounds2D>();
     private readonly List<CameraBounds2D> sceneBounds = new List<CameraBounds2D>();
 
@@ -45,6 +48,10 @@ public class CameraController : MonoBehaviour
     private float lockedX;
     private float lockedY;
     private float maxReachedX;
+    private bool mainMenuMode;
+    private bool savedLockState;
+    private bool savedLockHorizontal;
+    private bool savedLockVertical;
 
     private void Awake()
     {
@@ -91,6 +98,12 @@ public class CameraController : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (mainMenuMode)
+        {
+            transform.position = GetMainMenuPosition();
+            return;
+        }
+
         if (!followTarget) return;
         if (!ActiveBounds) return;
 
@@ -213,6 +226,56 @@ public class CameraController : MonoBehaviour
         if (verticalLocked && lockToCurrentPosition) lockedY = transform.position.y;
         lockHorizontal = horizontalLocked;
         lockVertical = verticalLocked;
+    }
+
+    public void EnterMainMenuMode()
+    {
+        if (!savedLockState)
+        {
+            savedLockHorizontal = lockHorizontal;
+            savedLockVertical = lockVertical;
+            savedLockState = true;
+        }
+
+        mainMenuMode = true;
+        transform.position = GetMainMenuPosition();
+        SetAxisLocks(true, true, true);
+        if (preventBacktrackingX) maxReachedX = transform.position.x;
+    }
+
+    public void ExitMainMenuMode()
+    {
+        if (!mainMenuMode) return;
+        mainMenuMode = false;
+
+        if (savedLockState)
+        {
+            SetAxisLocks(savedLockHorizontal, savedLockVertical, true);
+            savedLockState = false;
+        }
+    }
+
+    public void SetMainMenuOffset(Vector2 offset)
+    {
+        mainMenuOffset = offset;
+        if (!mainMenuMode) return;
+        transform.position = GetMainMenuPosition();
+    }
+
+    private Vector3 GetMainMenuPosition()
+    {
+        var current = transform.position;
+        if (!followTarget) return current;
+
+        var position = new Vector3(
+            followTarget.position.x + followOffset.x + mainMenuOffset.x,
+            followTarget.position.y + followOffset.y + mainMenuOffset.y,
+            current.z);
+
+        if (ActiveBounds)
+            position = SceneCamera.ClampToOrthographicBounds(ActiveBounds.WorldRect, position);
+
+        return position;
     }
 
     private void ApplyBackgroundColor()

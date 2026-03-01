@@ -15198,7 +15198,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 826a5d55db68b43d59c276872913a858, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TitleScript
+  m_EditorClassIdentifier: Assembly-CSharp::MainMenuSceneController
   arrow: {fileID: 1803549752}
   player1Pos: {fileID: 705241644}
   player2Pos: {fileID: 1335089672}

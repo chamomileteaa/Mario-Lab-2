@@ -15,7 +15,11 @@ public class MarioCollisionHandler : MonoBehaviour
     private const string OneUpMushroomTag = "OneUpMushroom";
 
     [Header("Collectibles")]
-    [SerializeField] private UIScript ui;
+    [SerializeField] private HudController ui;
+    [SerializeField, Min(0)] private int coinScore = 200;
+    [SerializeField, Min(0)] private int redMushroomScore = 1000;
+    [SerializeField, Min(0)] private int fireFlowerScore = 1000;
+    [SerializeField, Min(0)] private int starmanScore = 1000;
 
     [Header("Stomp")]
     [SerializeField, Min(0.1f)] private float stompBounceSpeed = 12f;
@@ -81,7 +85,7 @@ public class MarioCollisionHandler : MonoBehaviour
         var collectibleType = ResolveCollectibleType(collision, collectibleObject);
         if (collectibleType == CollectibleType.None) return false;
 
-        ApplyCollectible(collectibleType);
+        ApplyCollectible(collectibleType, collectibleObject);
         DespawnCollectible(collectibleObject);
         ui?.UpdateUI();
         return true;
@@ -240,32 +244,41 @@ public class MarioCollisionHandler : MonoBehaviour
         return collision.gameObject;
     }
 
-    private void ApplyCollectible(CollectibleType collectibleType)
+    private void ApplyCollectible(CollectibleType collectibleType, GameObject collectibleObject)
     {
+        var data = GameData.GetOrCreate();
         switch (collectibleType)
         {
             case CollectibleType.Coin:
-                GameData.Instance.AddCoin();
+                data.AddCoin();
+                data.AddScore(coinScore);
                 Mario.NotifyCoinCollected();
                 return;
 
             case CollectibleType.RedMushroom:
                 Mario.SetForm(MarioController.MarioForm.Big);
                 Mario.ActivateFormProtection();
+                data.AddScore(redMushroomScore);
+                ResolvePowerupController(collectibleObject)?.ShowCollectScorePopup(redMushroomScore);
                 return;
 
             case CollectibleType.FireFlower:
-                Mario.SetForm(MarioController.MarioForm.Fire);
+                Mario.SetForm(Mario.IsSmall ? MarioController.MarioForm.Big : MarioController.MarioForm.Fire);
                 Mario.ActivateFormProtection();
+                data.AddScore(fireFlowerScore);
+                ResolvePowerupController(collectibleObject)?.ShowCollectScorePopup(fireFlowerScore);
                 return;
 
             case CollectibleType.Starman:
                 Mario.ActivateStarPower();
+                data.AddScore(starmanScore);
+                ResolvePowerupController(collectibleObject)?.ShowCollectScorePopup(starmanScore);
                 return;
 
             case CollectibleType.OneUp:
                 Mario.NotifyExtraLifeCollected();
-                GameData.Instance.AddLife();
+                data.AddLife();
+                ResolvePowerupController(collectibleObject)?.ShowCollectLabelPopup("1UP");
                 return;
         }
     }
@@ -334,6 +347,14 @@ public class MarioCollisionHandler : MonoBehaviour
     {
         if (!collectible) return;
         PrefabPoolService.Despawn(collectible);
+    }
+
+    private static PowerupController ResolvePowerupController(GameObject collectibleObject)
+    {
+        if (!collectibleObject) return null;
+        if (collectibleObject.TryGetComponent<PowerupController>(out var direct))
+            return direct;
+        return collectibleObject.GetComponentInChildren<PowerupController>(true);
     }
 
     private struct CachedEnemyHandlers

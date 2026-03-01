@@ -28,11 +28,12 @@ public class MusicPlayer : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float hurryUpSfxVolume = 1f;
     [SerializeField, Min(1f)] private float hurryTimeThreshold = 100f;
     [SerializeField, Min(0.01f)] private float scheduleLeadTime = 0.05f;
+    [SerializeField] private bool preloadThemeAudioData = true;
     [SerializeField] private AudioSource sourceA;
     [SerializeField] private AudioSource sourceB;
 
     private MarioController mario;
-    private UIScript uiScript;
+    private GameData gameData;
     private AudioSource[] sources;
     private AudioClip currentClip;
     private MusicTheme currentTheme;
@@ -41,11 +42,12 @@ public class MusicPlayer : MonoBehaviour
     private bool hurryTriggered;
 
     private MarioController Mario => mario ? mario : mario = FindFirstObjectByType<MarioController>(FindObjectsInactive.Include);
-    private UIScript UI => uiScript ? uiScript : uiScript = FindFirstObjectByType<UIScript>(FindObjectsInactive.Include);
+    private GameData Data => gameData ? gameData : gameData = GameData.GetOrCreate();
     private AudioSource[] Sources => sources ??= ResolveSources();
 
     private void OnEnable()
     {
+        PrewarmAudioData();
         TrySubscribeMario();
     }
 
@@ -241,10 +243,10 @@ public class MusicPlayer : MonoBehaviour
     private void TryTriggerHurryState()
     {
         if (hurryTriggered) return;
-        var ui = UI;
-        if (!ui) return;
-        if (ui.timeLeft > hurryTimeThreshold) return;
-        if (ui.timeLeft <= 0f) return;
+        var data = Data;
+        if (!data) return;
+        if (data.timer > hurryTimeThreshold) return;
+        if (data.timer <= 0f) return;
         if (!IsHurryCapable(activeLevelTheme)) return;
 
         hurryTriggered = true;
@@ -298,5 +300,23 @@ public class MusicPlayer : MonoBehaviour
             MusicTheme.CastleHurried => MusicTheme.Castle,
             _ => theme
         };
+    }
+
+    private void PrewarmAudioData()
+    {
+        _ = Sources;
+        if (!preloadThemeAudioData) return;
+
+        PreloadThemeAudioData(GetStarmanVariant());
+        PreloadThemeAudioData(MusicTheme.Starman);
+        PreloadThemeAudioData(MusicTheme.StarmanHurried);
+        PreloadThemeAudioData(NormalizeLevelTheme(activeLevelTheme));
+        PreloadThemeAudioData(GetHurriedVariant(activeLevelTheme));
+    }
+
+    private void PreloadThemeAudioData(MusicTheme theme)
+    {
+        if (!themes.TryGetValue(theme, out var clip) || !clip) return;
+        clip.LoadAudioData();
     }
 }

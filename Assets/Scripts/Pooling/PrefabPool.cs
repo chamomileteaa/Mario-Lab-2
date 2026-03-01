@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
 public class PrefabPool : MonoBehaviour
@@ -61,6 +62,12 @@ public class PrefabPool : MonoBehaviour
 
         var instance = pooled.gameObject;
         instance.transform.SetParent(parent, false);
+        if (!parent)
+        {
+            var activeScene = SceneManager.GetActiveScene();
+            if (activeScene.IsValid() && instance.scene != activeScene)
+                SceneManager.MoveGameObjectToScene(instance, activeScene);
+        }
         instance.transform.SetPositionAndRotation(position, rotation);
         instance.SetActive(true);
         return instance;

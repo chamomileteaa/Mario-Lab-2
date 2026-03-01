@@ -7,7 +7,6 @@ public class FlagTrigger : MonoBehaviour
     public bool triggersFireworks = false; // check this only on the green flag
     public GameObject fireworkPrefab;
     public Transform fireworksSpawnPoint;
-    public UIScript uiScript;
     public AudioClip fireworkSound;
     private AudioSource audioSource;
     private bool hasTriggered = false;
@@ -34,7 +33,8 @@ public class FlagTrigger : MonoBehaviour
 
             if (triggersFireworks)
             {
-                int lastDigit = (int)Mathf.Ceil(uiScript.timeLeft) % 10;
+                var remainingTime = GameData.GetOrCreate().timer;
+                int lastDigit = (int)Mathf.Ceil(remainingTime) % 10;
 
                 int fireworkCount = 0;
                 if (lastDigit == 1) fireworkCount = 1;

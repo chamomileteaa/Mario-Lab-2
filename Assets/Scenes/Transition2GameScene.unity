@@ -582,7 +582,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 79ff4e623f38d4f7688662dfe597117d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TransitionSceneScript
+  m_EditorClassIdentifier: Assembly-CSharp::TransitionSceneController
   textsToFade:
   - {fileID: 298359307}
   - {fileID: 912839768}

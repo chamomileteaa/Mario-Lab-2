@@ -11,6 +11,7 @@ using UnityEditor.Animations;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider2D))]
+[RequireComponent(typeof(AudioPlayer))]
 public class Block : MonoBehaviour
 {
     private const string PlayerTag = "Player";
@@ -81,6 +82,8 @@ public class Block : MonoBehaviour
 
     [Header("Spawns")]
     [SerializeField] private ParticleSystem breakParticles;
+    [SerializeField] private AudioClip breakClip;
+    [SerializeField] private AudioClip bumpClip;
     [SerializeField, Min(0f)] private float hitCooldown = 0.05f;
     [SerializeField, Min(0f)] private float bumpHeight = 0.5f;
     [SerializeField, Min(0.01f)] private float bumpDuration = 0.12f;
@@ -90,6 +93,7 @@ public class Block : MonoBehaviour
     private BoxCollider2D boxCollider2D;
     private SpriteRenderer spriteRenderer;
     private Animator animatorComponent;
+    private AudioPlayer audioPlayer;
     private readonly Collider2D[] bumpHits = new Collider2D[12];
     private readonly HashSet<int> bumpNotifiedIds = new HashSet<int>();
 
@@ -97,6 +101,7 @@ public class Block : MonoBehaviour
     private float multiEndTime = -1f;
     private bool isUsed;
     private bool isHidden;
+    private bool isBreaking;
     private bool initialTriggerState;
     private float spriteBaseAlpha = 1f;
     private Coroutine bumpRoutine;
@@ -105,12 +110,14 @@ public class Block : MonoBehaviour
     private BoxCollider2D BoxCollider => boxCollider2D ? boxCollider2D : boxCollider2D = GetComponent<BoxCollider2D>();
     private SpriteRenderer Sprite => spriteRenderer ? spriteRenderer : spriteRenderer = ResolveSpriteRenderer();
     private Animator Animator => animatorComponent ? animatorComponent : animatorComponent = GetComponent<Animator>();
+    private AudioPlayer Audio => audioPlayer ? audioPlayer : audioPlayer = GetComponent<AudioPlayer>();
     private SpriteRenderer OverlayContent => overlayContent ? overlayContent : overlayContent = ResolveOverlayContent();
     private TMP_Text OverlayTime => overlayTime ? overlayTime : overlayTime = ResolveOverlayTime();
     private Vector3 SpawnPosition => BoxCollider.bounds.center;
 
     private void Awake()
     {
+        _ = Audio;
         NormalizeByKind();
         initialTriggerState = BoxCollider.isTrigger;
         CacheSpriteAlpha();
@@ -210,6 +217,12 @@ public class Block : MonoBehaviour
             ApplyVisualState();
         }
 
+        if (isUsed)
+        {
+            if (bumpClip) Audio.PlayOneShot(bumpClip);
+            return;
+        }
+
         StartBump();
         NotifyBumpHandlers(mario);
 
@@ -295,6 +308,16 @@ public class Block : MonoBehaviour
 
     private void Break()
     {
+        if (isBreaking) return;
+        isBreaking = true;
+
+        var destroyDelay = 0f;
+        if (breakClip)
+        {
+            Audio.PlayOneShot(breakClip);
+            destroyDelay = Mathf.Clamp(breakClip.length, 0f, 0.3f);
+        }
+
         if (breakParticles)
             PrefabPoolService.Spawn(breakParticles.gameObject, BoxCollider.bounds.center, Quaternion.identity);
 
@@ -310,8 +333,18 @@ public class Block : MonoBehaviour
         foreach (var collider in GetComponentsInChildren<Collider2D>(true))
             if (collider) collider.enabled = false;
 
-        enabled = false;
-        gameObject.SetActive(false);
+        if (destroyDelay <= 0f)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        StartCoroutine(DestroyAfterDelay(destroyDelay));
+    }
+
+    private IEnumerator DestroyAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
         Destroy(gameObject);
     }
 

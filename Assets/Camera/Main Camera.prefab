@@ -157,3 +157,4 @@ MonoBehaviour:
   lockVertical: 0
   smoothTime: {x: 0.05, y: 0.08}
   preventBacktrackingX: 1
+  mainMenuOffset: {x: 0, y: 4}

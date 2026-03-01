@@ -167,6 +167,7 @@ public class EntityController : MonoBehaviour, IBlockBumpHandler, IEnemyImpactHa
                 var velocity = Body.linearVelocity;
                 velocity.y = Mathf.Max(velocity.y, bumpUpwardSpeed);
                 Body.linearVelocity = velocity;
+                ReverseDirection();
                 return;
             }
 

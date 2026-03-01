@@ -67,10 +67,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Score
+  m_text: 100
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ed10095790337a748b1f7a338e60046e, type: 2}
-  m_sharedMaterial: {fileID: 830618657052100897, guid: ed10095790337a748b1f7a338e60046e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 2f48bd76c3b8b1a45a96314c05e7758c, type: 2}
+  m_sharedMaterial: {fileID: 2720061776896650771, guid: 2f48bd76c3b8b1a45a96314c05e7758c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -102,7 +102,7 @@ MonoBehaviour:
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 32
-  m_VerticalAlignment: 8192
+  m_VerticalAlignment: 4096
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_characterHorizontalScale: 1
@@ -152,7 +152,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScorePopup
   score: 200
-  riseDistance: 48
+  riseSpeed: 150
   lifetime: 0.6
   fadeStartNormalized: 0.45
 --- !u!114 &646570979783357282

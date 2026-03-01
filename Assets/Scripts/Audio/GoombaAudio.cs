@@ -26,6 +26,15 @@ public class GoombaAudio : AudioPlayer
 
     public void PlaySpawn() => Play(GoombaSfxType.Spawn);
     public void PlayStompDefeat() => Play(GoombaSfxType.StompDefeat);
-    public void PlayKnockbackDefeat() => Play(GoombaSfxType.KnockbackDefeat);
+    public void PlayKnockbackDefeat()
+    {
+        if (cues.TryGetValue(GoombaSfxType.KnockbackDefeat, out var knockbackClip) && knockbackClip)
+        {
+            PlayOneShot(knockbackClip);
+            return;
+        }
+
+        PlayStompDefeat();
+    }
 
 }
